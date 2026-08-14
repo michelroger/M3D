@@ -18,11 +18,16 @@ const STORAGE_KEY_SETTINGS = 'm3d_store_settings';
 export const App: React.FC = () => {
   const [products, setProducts] = useState<Product[]>(() => {
     try {
-      // Recuperação inteligente: tenta a nova chave m3d_ e a chave anterior mr3d_
       const savedEncrypted = localStorage.getItem(STORAGE_KEY_PRODUCTS) || localStorage.getItem('mr3d_catalog_products');
       if (savedEncrypted) {
         const decrypted = decryptData<Product[]>(savedEncrypted);
-        if (decrypted && Array.isArray(decrypted)) return decrypted;
+        if (decrypted && Array.isArray(decrypted)) {
+          // Mesclagem Inteligente: Mantém o catálogo oficial do repositório (catalog.json) 
+          // E adiciona as peças novas cadastradas localmente pelo Admin!
+          const defaultIds = new Set((defaultCatalog as Product[]).map((p) => p.id));
+          const customUserProducts = decrypted.filter((p) => !defaultIds.has(p.id));
+          return [...(defaultCatalog as Product[]), ...customUserProducts];
+        }
       }
     } catch (err) {
       console.warn('Usando catálogo inicial padrão.');
