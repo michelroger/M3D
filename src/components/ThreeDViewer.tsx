@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import { Loader2, RotateCcw, Eye, Sparkles } from 'lucide-react';
 
 interface ThreeDViewerProps {
@@ -11,7 +12,7 @@ interface ThreeDViewerProps {
 }
 
 export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
-  stlUrl: _stlUrl,
+  stlUrl,
   colorHex,
   wireframe = false,
   scale = 1,
@@ -21,6 +22,7 @@ export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [isRotating, setIsRotating] = useState<boolean>(autoRotate);
   const [isWireframe, setIsWireframe] = useState<boolean>(wireframe);
+  const [modelType, setModelType] = useState<'stl' | 'demo'>('demo');
 
   const sceneRef = useRef<THREE.Scene | null>(null);
   const meshRef = useRef<THREE.Mesh | null>(null);
@@ -37,20 +39,24 @@ export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
     const width = containerRef.current.clientWidth;
     const height = containerRef.current.clientHeight || 350;
 
+    // 1. Cenário 3D
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#0b0f19');
     sceneRef.current = scene;
 
-    const gridHelper = new THREE.GridHelper(10, 20, 0xff5500, 0x1e293b);
+    // Hotbed Grid de Impressão 3D
+    const gridHelper = new THREE.GridHelper(12, 24, 0xff5500, 0x1e293b);
     gridHelper.position.y = -2;
     scene.add(gridHelper);
 
+    // 2. Câmera
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-    camera.position.set(0, 3, 8);
+    camera.position.set(0, 4, 9);
     camera.lookAt(0, 0, 0);
     cameraRef.current = camera;
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    // 3. Iluminação Studio
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
     scene.add(ambientLight);
 
     const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
@@ -61,6 +67,7 @@ export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
     fillLight.position.set(-5, -2, -5);
     scene.add(fillLight);
 
+    // 4. Renderer WebGL
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -68,22 +75,69 @@ export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
 
     containerRef.current.appendChild(renderer.domElement);
 
-    const geometry = createDefaultGeometry();
+    // Material 3D Base
     const material = new THREE.MeshStandardMaterial({
       color: new THREE.Color(colorHex),
       metalness: 0.3,
-      roughness: 0.2,
+      roughness: 0.25,
       wireframe: isWireframe,
     });
     materialRef.current = material;
 
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(0, 0, 0);
-    meshRef.current = mesh;
-    scene.add(mesh);
+    // Tentar Carregar Arquivo STL ou Geometria Demo
+    if (stlUrl && stlUrl.trim().length > 0) {
+      setLoading(true);
+      const loader = new STLLoader();
 
-    setLoading(false);
+      loader.load(
+        stlUrl,
+        (geometry) => {
+          geometry.center();
+          geometry.computeVertexNormals();
 
+          // Ajustar escala para caber na câmera
+          geometry.computeBoundingBox();
+          const box = geometry.boundingBox;
+          if (box) {
+            const maxDim = Math.max(
+              box.max.x - box.min.x,
+              box.max.y - box.min.y,
+              box.max.z - box.min.z
+            );
+            const targetSize = 3.5;
+            const fitScale = maxDim > 0 ? targetSize / maxDim : 1;
+            geometry.scale(fitScale, fitScale, fitScale);
+          }
+
+          const mesh = new THREE.Mesh(geometry, material);
+          mesh.position.set(0, 0, 0);
+          meshRef.current = mesh;
+          scene.add(mesh);
+          setModelType('stl');
+          setLoading(false);
+        },
+        undefined,
+        (error) => {
+          console.warn('Erro ao carregar modelo STL, usando renderizador geométrico:', error);
+          createFallbackMesh(scene, material);
+        }
+      );
+    } else {
+      createFallbackMesh(scene, material);
+    }
+
+    function createFallbackMesh(sc: THREE.Scene, mat: THREE.MeshStandardMaterial) {
+      const geom = new THREE.IcosahedronGeometry(1.8, 1);
+      geom.computeVertexNormals();
+      const mesh = new THREE.Mesh(geom, mat);
+      mesh.position.set(0, 0, 0);
+      meshRef.current = mesh;
+      sc.add(mesh);
+      setModelType('demo');
+      setLoading(false);
+    }
+
+    // Loop de Animação
     let animationFrameId: number;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
@@ -114,23 +168,24 @@ export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
       if (rendererRef.current && containerRef.current) {
         containerRef.current.removeChild(rendererRef.current.domElement);
       }
-      geometry.dispose();
-      material.dispose();
     };
-  }, []);
+  }, [stlUrl]);
 
+  // Atualizar Cor
   useEffect(() => {
     if (materialRef.current) {
       materialRef.current.color.set(colorHex);
     }
   }, [colorHex]);
 
+  // Atualizar Wireframe
   useEffect(() => {
     if (materialRef.current) {
       materialRef.current.wireframe = isWireframe;
     }
   }, [isWireframe]);
 
+  // Atualizar Escala
   useEffect(() => {
     if (meshRef.current) {
       meshRef.current.scale.set(scale, scale, scale);
@@ -158,12 +213,6 @@ export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
     isDragging.current = false;
   };
 
-  function createDefaultGeometry(): THREE.BufferGeometry {
-    const geom = new THREE.IcosahedronGeometry(1.8, 1);
-    geom.computeVertexNormals();
-    return geom;
-  }
-
   const resetView = () => {
     if (meshRef.current) {
       meshRef.current.rotation.set(0, 0, 0);
@@ -176,7 +225,7 @@ export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm z-20 text-orange-500">
           <Loader2 className="w-8 h-8 animate-spin mb-2" />
-          <span className="text-xs font-mono tracking-widest text-slate-400">CARREGANDO MODELO 3D...</span>
+          <span className="text-xs font-mono tracking-widest text-slate-400">PROCESSANDO ARQUIVO 3D...</span>
         </div>
       )}
 
@@ -191,7 +240,9 @@ export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
 
       <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-700/50 flex items-center gap-2 pointer-events-none">
         <Sparkles className="w-3.5 h-3.5 text-orange-400 animate-pulse" />
-        <span className="text-[11px] font-medium text-slate-300">Preview 3D Interativo • Arraste para girar</span>
+        <span className="text-[11px] font-medium text-slate-300">
+          {modelType === 'stl' ? 'Modelo STL/3MF Real Renderizado' : 'Preview 3D Interativo'} • Arraste para girar
+        </span>
       </div>
 
       <div className="absolute bottom-3 right-3 flex items-center gap-2 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-700/60 shadow-lg">
@@ -201,7 +252,7 @@ export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
           className={`p-2 rounded-lg text-xs font-semibold transition-all ${
             isWireframe ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30' : 'text-slate-400 hover:text-white hover:bg-slate-800'
           }`}
-          title="Alternar Modo Wireframe / Malha 3D"
+          title="Alternar Wireframe"
         >
           <Eye className="w-4 h-4" />
         </button>
@@ -212,7 +263,7 @@ export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
           className={`px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition-all ${
             isRotating ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40' : 'text-slate-400 hover:bg-slate-800'
           }`}
-          title="Alternar Rotação Automática"
+          title="Rotação Automática"
         >
           {isRotating ? 'AUTO-ROTAÇÃO ON' : 'PAUSADO'}
         </button>
@@ -221,7 +272,7 @@ export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
           type="button"
           onClick={resetView}
           className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
-          title="Resetar Posição 3D"
+          title="Resetar Câmera"
         >
           <RotateCcw className="w-4 h-4" />
         </button>

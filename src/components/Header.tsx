@@ -1,13 +1,11 @@
 import React from 'react';
-import { Box, Search, ShieldLock, MessageSquare, Sparkles } from 'lucide-react';
+import { Box, Search, ShieldLock, MessageSquare } from 'lucide-react';
 import type { StoreSettings } from '../types';
-import { APP_VERSION } from '../config/version';
 
 interface HeaderProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onOpenAdmin: () => void;
-  onOpenCostCalc: () => void;
   settings: StoreSettings;
 }
 
@@ -15,14 +13,13 @@ export const Header: React.FC<HeaderProps> = ({
   searchQuery,
   onSearchChange,
   onOpenAdmin,
-  onOpenCostCalc,
   settings,
 }) => {
   return (
     <header className="sticky top-0 z-40 w-full bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 transition-all shadow-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
         
-        {/* LOGO & BRANDING */}
+        {/* LOGO & BRANDING (Sem tag de versão pública) */}
         <div className="flex items-center gap-3 cursor-pointer group">
           <div className="relative flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 shadow-lg shadow-orange-500/20 group-hover:scale-105 transition-all">
             <Box className="w-6 h-6 text-white transform group-hover:rotate-12 transition-transform duration-300" />
@@ -38,7 +35,7 @@ export const Header: React.FC<HeaderProps> = ({
                 M3D
               </span>
               <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-orange-400 bg-orange-500/10 border border-orange-500/30 rounded-md uppercase">
-                v{APP_VERSION}
+                Maker Store
               </span>
             </div>
             <p className="text-xs text-slate-400 font-medium">Impressão 3D & Orçamentos sob Medida</p>
@@ -67,7 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* BOTÕES DE AÇÃO E ADMIN */}
+        {/* BOTÕES DE AÇÃO E ADMIN (Calculadora removida daqui por ser restrita ao Admin) */}
         <div className="flex items-center gap-2 sm:gap-3">
           <a
             href={`https://wa.me/${settings.whatsappNumber.replace(/\D/g, '')}`}
@@ -78,15 +75,6 @@ export const Header: React.FC<HeaderProps> = ({
             <MessageSquare className="w-4 h-4" />
             <span>Falar no WhatsApp</span>
           </a>
-
-          <button
-            onClick={onOpenCostCalc}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition-all"
-            title="Calculadora Interna de Custos de Impressão"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Calculadora 3D</span>
-          </button>
 
           <button
             onClick={onOpenAdmin}

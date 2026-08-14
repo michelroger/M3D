@@ -7,7 +7,12 @@ export type ProductCategory =
   | 'geek' 
   | 'tools';
 
-export type FilamentMaterial = 'PLA' | 'PETG' | 'ABS' | 'TPU' | 'Resina';
+export interface CustomMaterial {
+  id: string;
+  name: string; // Ex: PLA, PETG, ABS, TPU, Resina, PETG-CF, Nylon, ASA
+  priceMultiplier: number; // Ex: 1.0, 1.15, 1.4
+  description?: string;
+}
 
 export interface ProductColor {
   name: string;
@@ -29,9 +34,9 @@ export interface Product {
   dimensions: ProductDimensions;
   weightGrams: number;
   printTimeHours: number;
-  availableMaterials: FilamentMaterial[];
+  availableMaterials: string[]; // Lista de nomes de materiais (ex: ['PLA', 'PETG', 'Nylon'])
   availableColors: ProductColor[];
-  stlUrl?: string; // URL do modelo 3D estático ou customizado
+  stlUrl?: string; // URL web ou Data URL base64 do modelo 3D (.stl / .3mf)
   imageUrl: string;
   featured?: boolean;
   inStock: boolean;
@@ -40,7 +45,7 @@ export interface Product {
 
 export interface QuoteCustomization {
   productId: string;
-  material: FilamentMaterial;
+  material: string;
   color: ProductColor;
   scaleMultiplier: number; // Ex: 1 = 100%, 1.5 = 150%
   infillPercent: number; // Ex: 15%, 20%, 50%, 100%
@@ -80,6 +85,7 @@ export interface StoreSettings {
   adminPinHash: string; // SHA-256 hash da senha
   adminSalt: string;
   currencySymbol: string;
-  githubRepo?: string; // Ex: "usuario/m3d"
-  githubToken?: string; // Token encriptado localmente
+  customMaterials: CustomMaterial[]; // Materiais e filamentos dinâmicos
+  githubRepo?: string;
+  githubToken?: string;
 }

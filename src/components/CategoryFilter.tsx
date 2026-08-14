@@ -1,5 +1,5 @@
 import React from 'react';
-import type { FilamentMaterial } from '../types';
+import type { CustomMaterial } from '../types';
 import { SlidersHorizontal, ArrowUpDown } from 'lucide-react';
 
 interface CategoryFilterProps {
@@ -7,6 +7,7 @@ interface CategoryFilterProps {
   onSelectCategory: (category: string) => void;
   selectedMaterial: string;
   onSelectMaterial: (material: string) => void;
+  materials: CustomMaterial[];
   sortBy: 'featured' | 'price-asc' | 'price-desc' | 'title';
   onSortChange: (sort: 'featured' | 'price-asc' | 'price-desc' | 'title') => void;
 }
@@ -21,13 +22,12 @@ const CATEGORIES: { id: string; label: string; icon: string }[] = [
   { id: 'functional', label: 'Peças Úteis', icon: '🔧' },
 ];
 
-const MATERIALS: FilamentMaterial[] = ['PLA', 'PETG', 'ABS', 'TPU', 'Resina'];
-
 export const CategoryFilter: React.FC<CategoryFilterProps> = ({
   selectedCategory,
   onSelectCategory,
   selectedMaterial,
   onSelectMaterial,
+  materials = [],
   sortBy,
   onSortChange,
 }) => {
@@ -71,17 +71,17 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
             Todos
           </button>
 
-          {MATERIALS.map((mat) => (
+          {materials.map((mat) => (
             <button
-              key={mat}
-              onClick={() => onSelectMaterial(mat)}
+              key={mat.id}
+              onClick={() => onSelectMaterial(mat.name)}
               className={`px-3 py-1 rounded-lg text-xs font-mono font-medium transition-all ${
-                selectedMaterial === mat
+                selectedMaterial === mat.name
                   ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              {mat}
+              {mat.name}
             </button>
           ))}
         </div>

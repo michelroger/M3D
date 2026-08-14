@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import type { Product, StoreSettings, ProductCategory } from '../types';
+import type { Product, StoreSettings, ProductCategory, CustomMaterial } from '../types';
 import { hashPassword } from '../services/security';
 import { APP_VERSION, APP_BUILD_DATE, CHANGELOG } from '../config/version';
-import { X, ShieldLock, Plus, Trash2, Edit3, Save, Download, Upload, Lock, Phone, Store, Key, GitCommit, CheckCircle2, History } from 'lucide-react';
+import { X, ShieldLock, Plus, Trash2, Edit3, Save, Download, Upload, Lock, Phone, Store, Key, GitCommit, CheckCircle2, History, Calculator, Layers, FileCode, UploadCloud } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface AdminModalProps {
@@ -12,6 +12,7 @@ interface AdminModalProps {
   onSaveProducts: (products: Product[]) => void;
   settings: StoreSettings;
   onSaveSettings: (settings: StoreSettings) => void;
+  onOpenCostCalc: () => void;
 }
 
 export const AdminModal: React.FC<AdminModalProps> = ({
@@ -21,6 +22,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   onSaveProducts,
   settings,
   onSaveSettings,
+  onOpenCostCalc,
 }) => {
   if (!isOpen) return null;
 
@@ -28,14 +30,29 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [pinInput, setPinInput] = useState<string>('');
   const [pinError, setPinError] = useState<string>('');
 
-  const [activeTab, setActiveTab] = useState<'products' | 'settings' | 'sync' | 'changelog'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'materials' | 'settings' | 'sync' | 'changelog'>('products');
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
 
+  // Estados de Configurações da Loja
   const [whatsappNumber, setWhatsappNumber] = useState<string>(settings.whatsappNumber);
   const [storeName, setStoreName] = useState<string>(settings.storeName);
   const [newPin, setNewPin] = useState<string>('');
   const [saveMessage, setSaveMessage] = useState<string>('');
 
+  // Estados de Gerenciamento Dinâmico de Materiais
+  const [materialsList, setMaterialsList] = useState<CustomMaterial[]>(
+    settings.customMaterials || [
+      { id: 'pla', name: 'PLA', priceMultiplier: 1.0 },
+      { id: 'petg', name: 'PETG', priceMultiplier: 1.15 },
+      { id: 'abs', name: 'ABS', priceMultiplier: 1.1 },
+      { id: 'tpu', name: 'TPU', priceMultiplier: 1.3 },
+      { id: 'resina', name: 'Resina', priceMultiplier: 1.4 },
+    ]
+  );
+  const [newMaterialName, setNewMaterialName] = useState<string>('');
+  const [newMaterialMultiplier, setNewMaterialMultiplier] = useState<number>(1.0);
+
+  // Autenticação Admin
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setPinError('');
@@ -49,6 +66,25 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     }
   };
 
+  // Upload Local de Arquivo 3D (.stl / .3mf) para Data URL
+  const handleStlFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0] && editingProduct) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setEditingProduct({
+            ...editingProduct,
+            stlUrl: event.target.result as string,
+          });
+          alert(`Modelo 3D (${file.name}) carregado com sucesso!`);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Salvar Peça (Criar ou Editar)
   const handleSaveProduct = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct || !editingProduct.title) return;
@@ -68,11 +104,13 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         dimensions: editingProduct.dimensions || { x: 100, y: 100, z: 100 },
         weightGrams: editingProduct.weightGrams || 100,
         printTimeHours: editingProduct.printTimeHours || 4,
-        availableMaterials: editingProduct.availableMaterials || ['PLA', 'PETG'],
+        availableMaterials: editingProduct.availableMaterials || materialsList.map((m) => m.name),
         availableColors: editingProduct.availableColors || [
           { name: 'Preto', hex: '#121212' },
           { name: 'Laranja', hex: '#FF5500' },
+          { name: 'Ciano', hex: '#00F0FF' },
         ],
+        stlUrl: editingProduct.stlUrl || '',
         imageUrl:
           editingProduct.imageUrl ||
           'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
@@ -87,6 +125,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     confetti({ particleCount: 40, spread: 60, origin: { y: 0.5 } });
   };
 
+  // Excluir Peça
   const handleDeleteProduct = (id: string) => {
     if (window.confirm('Tem certeza que deseja excluir esta peça do catálogo?')) {
       const updated = products.filter((p) => p.id !== id);
@@ -94,6 +133,33 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     }
   };
 
+  // Adicionar Novo Material Dinâmico
+  const handleAddMaterial = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMaterialName.trim()) return;
+
+    const newMat: CustomMaterial = {
+      id: `mat-${Date.now()}`,
+      name: newMaterialName.trim(),
+      priceMultiplier: newMaterialMultiplier,
+    };
+
+    const updated = [...materialsList, newMat];
+    setMaterialsList(updated);
+    onSaveSettings({ ...settings, customMaterials: updated });
+    setNewMaterialName('');
+    setNewMaterialMultiplier(1.0);
+    confetti({ particleCount: 30, spread: 50 });
+  };
+
+  // Excluir Material Dinâmico
+  const handleDeleteMaterial = (id: string) => {
+    const updated = materialsList.filter((m) => m.id !== id);
+    setMaterialsList(updated);
+    onSaveSettings({ ...settings, customMaterials: updated });
+  };
+
+  // Salvar Configurações Gerais da Loja
   const handleSaveStoreSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     let updatedHash = settings.adminPinHash;
@@ -107,6 +173,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       whatsappNumber,
       storeName,
       adminPinHash: updatedHash,
+      customMaterials: materialsList,
     };
 
     onSaveSettings(updatedSettings);
@@ -114,6 +181,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setTimeout(() => setSaveMessage(''), 3000);
   };
 
+  // Exportar Catálogo JSON
   const handleExportJSON = () => {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(products, null, 2));
     const downloadAnchor = document.createElement('a');
@@ -124,6 +192,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     downloadAnchor.remove();
   };
 
+  // Importar Backup JSON
   const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileReader = new FileReader();
     if (e.target.files && e.target.files[0]) {
@@ -146,17 +215,33 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/85 backdrop-blur-md overflow-y-auto">
       <div className="relative w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden my-8 max-h-[90vh] flex flex-col">
         
+        {/* HEADER DO PAINEL ADMIN */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950">
           <div className="flex items-center gap-2">
             <ShieldLock className="w-5 h-5 text-orange-400" />
             <h2 className="text-lg font-bold text-white">Painel Administrativo M3D</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+          <div className="flex items-center gap-2">
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={onOpenCostCalc}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 text-xs font-bold hover:bg-cyan-500/30 transition-all"
+                title="Abrir Calculadora de Custos de Impressão 3D"
+              >
+                <Calculator className="w-4 h-4" />
+                <span>Calculadora de Custos 3D</span>
+              </button>
+            )}
+
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {!isAuthenticated ? (
@@ -194,6 +279,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden">
             
+            {/* TABS DE NAVEGAÇÃO DO ADMIN */}
             <div className="flex items-center gap-2 px-6 pt-4 border-b border-slate-800 bg-slate-950/40 overflow-x-auto">
               <button
                 onClick={() => setActiveTab('products')}
@@ -203,7 +289,19 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Catálogo ({products.length})
+                Catálogo de Peças ({products.length})
+              </button>
+
+              <button
+                onClick={() => setActiveTab('materials')}
+                className={`px-4 py-2.5 rounded-t-xl text-xs font-semibold transition-all border-b-2 whitespace-nowrap flex items-center gap-1.5 ${
+                  activeTab === 'materials'
+                    ? 'border-orange-500 text-orange-400 bg-slate-900'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Materiais & Filamentos ({materialsList.length})</span>
               </button>
 
               <button
@@ -241,13 +339,15 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               </button>
             </div>
 
+            {/* CONTEÚDO DAS TABS */}
             <div className="p-6 overflow-y-auto flex-1">
               
+              {/* TAB 1: PRODUTOS & UPLOAD 3D (.STL / .3MF) */}
               {activeTab === 'products' && (
                 <div className="space-y-6">
                   
                   <div className="flex justify-between items-center">
-                    <h3 className="text-sm font-bold text-white font-mono">GERENCIAMENTO DE PRODUTOS</h3>
+                    <h3 className="text-sm font-bold text-white font-mono">GERENCIAMENTO DE PEÇAS 3D</h3>
                     <button
                       onClick={() =>
                         setEditingProduct({
@@ -258,11 +358,13 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           dimensions: { x: 100, y: 100, z: 100 },
                           weightGrams: 100,
                           printTimeHours: 4,
-                          availableMaterials: ['PLA', 'PETG'],
+                          availableMaterials: materialsList.map((m) => m.name),
                           availableColors: [
                             { name: 'Preto', hex: '#121212' },
                             { name: 'Laranja', hex: '#FF5500' },
+                            { name: 'Ciano', hex: '#00F0FF' },
                           ],
+                          stlUrl: '',
                           imageUrl: '',
                           inStock: true,
                         })
@@ -274,8 +376,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     </button>
                   </div>
 
+                  {/* FORMULÁRIO DE EDIÇÃO DE PRODUTO */}
                   {editingProduct && (
-                    <form onSubmit={handleSaveProduct} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-4">
+                    <form onSubmit={handleSaveProduct} className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-4">
                       <h4 className="text-xs font-bold text-orange-400 font-mono">
                         {editingProduct.id ? 'EDITAR PEÇA 3D' : 'CADASTRAR NOVA PEÇA 3D'}
                       </h4>
@@ -331,6 +434,47 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           />
                         </div>
 
+                        {/* UPLOAD DO MODELO 3D (.STL / .3MF) */}
+                        <div className="sm:col-span-2 p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                          <label className="block text-xs font-mono font-bold text-cyan-400 flex items-center gap-1.5">
+                            <FileCode className="w-4 h-4" />
+                            Modelo 3D para Visualização do Cliente (.stl / .3mf)
+                          </label>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <span className="text-[11px] text-slate-400 block mb-1">Option A: Cole uma URL direta do arquivo STL:</span>
+                              <input
+                                type="text"
+                                value={editingProduct.stlUrl || ''}
+                                onChange={(e) => setEditingProduct({ ...editingProduct, stlUrl: e.target.value })}
+                                className="w-full bg-slate-950 text-slate-200 text-xs p-2.5 rounded-xl border border-slate-800 focus:border-cyan-500 focus:outline-none font-mono"
+                                placeholder="https://raw.githubusercontent.com/.../model.stl"
+                              />
+                            </div>
+
+                            <div>
+                              <span className="text-[11px] text-slate-400 block mb-1">Option B: Upload de Arquivo STL do Computador:</span>
+                              <label className="flex items-center justify-center gap-2 p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 cursor-pointer font-bold text-xs transition-all">
+                                <UploadCloud className="w-4 h-4" />
+                                <span>Selecionar Arquivo .STL / .3MF</span>
+                                <input
+                                  type="file"
+                                  accept=".stl,.3mf"
+                                  onChange={handleStlFileUpload}
+                                  className="hidden"
+                                />
+                              </label>
+                            </div>
+                          </div>
+
+                          {editingProduct.stlUrl && (
+                            <p className="text-[10px] text-emerald-400 font-mono flex items-center gap-1 mt-1">
+                              ✓ Modelo 3D carregado ({editingProduct.stlUrl.slice(0, 45)}...)
+                            </p>
+                          )}
+                        </div>
+
                         <div className="sm:col-span-2">
                           <label className="block text-slate-400 mb-1">Descrição Detalhada:</label>
                           <textarea
@@ -370,7 +514,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         <div className="flex items-center gap-3">
                           <img src={p.imageUrl} alt={p.title} className="w-12 h-12 rounded-xl object-cover" />
                           <div>
-                            <h4 className="text-xs font-bold text-white">{p.title}</h4>
+                            <h4 className="text-xs font-bold text-white flex items-center gap-2">
+                              {p.title}
+                              {p.stlUrl && (
+                                <span className="px-2 py-0.5 rounded text-[9px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                                  3D MODEL
+                                </span>
+                              )}
+                            </h4>
                             <p className="text-[10px] text-slate-400 font-mono">
                               Cat: {p.category} • Preço: R$ {p.basePrice.toFixed(2)}
                             </p>
@@ -400,6 +551,76 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 </div>
               )}
 
+              {/* TAB 2: GERENCIAMENTO DINÂMICO DE MATERIAIS */}
+              {activeTab === 'materials' && (
+                <div className="space-y-6 text-xs text-slate-300">
+                  <h3 className="text-sm font-bold text-white font-mono">GERENCIAMENTO DINÂMICO DE MATERIAIS & FILAMENTOS</h3>
+
+                  {/* CADASTRO DE NOVO MATERIAL */}
+                  <form onSubmit={handleAddMaterial} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                    <h4 className="text-xs font-bold text-orange-400 font-mono">CADASTRAR NOVO FILAMENTO / MATERIAL</h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-slate-400 mb-1">Nome do Material:</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ex: PETG-CF, Nylon, ASA..."
+                          value={newMaterialName}
+                          onChange={(e) => setNewMaterialName(e.target.value)}
+                          className="w-full bg-slate-900 text-white p-2.5 rounded-xl border border-slate-800 focus:border-orange-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-400 mb-1">Multiplicador de Preço:</label>
+                        <input
+                          type="number"
+                          step="0.05"
+                          required
+                          value={newMaterialMultiplier}
+                          onChange={(e) => setNewMaterialMultiplier(parseFloat(e.target.value) || 1.0)}
+                          className="w-full bg-slate-900 text-white p-2.5 rounded-xl border border-slate-800 font-mono focus:border-orange-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="flex items-end">
+                        <button
+                          type="submit"
+                          className="w-full py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Adicionar Material</span>
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+
+                  {/* LISTA DE MATERIAIS */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {materialsList.map((mat) => (
+                      <div key={mat.id} className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 flex justify-between items-center">
+                        <div>
+                          <span className="font-bold text-white font-mono text-sm block">{mat.name}</span>
+                          <span className="text-[11px] text-slate-400">Multiplicador: {mat.priceMultiplier}x</span>
+                        </div>
+
+                        <button
+                          onClick={() => handleDeleteMaterial(mat.id)}
+                          className="p-2 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
+                          title="Excluir Material"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                </div>
+              )}
+
+              {/* TAB 3: CONFIGURAÇÕES DA LOJA */}
               {activeTab === 'settings' && (
                 <form onSubmit={handleSaveStoreSettings} className="max-w-md space-y-4 text-xs">
                   <h3 className="text-sm font-bold text-white font-mono mb-4">CONFIGURAÇÕES GERAIS DA LOJA</h3>
@@ -456,6 +677,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 </form>
               )}
 
+              {/* TAB 4: SINCRONIZAÇÃO E GITHUB */}
               {activeTab === 'sync' && (
                 <div className="space-y-6 text-xs text-slate-300">
                   <h3 className="text-sm font-bold text-white font-mono">EXPORTAR & DEPLOY NO GITHUB PAGES</h3>
@@ -495,6 +717,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 </div>
               )}
 
+              {/* TAB 5: CONTROLE DE VERSÃO */}
               {activeTab === 'changelog' && (
                 <div className="space-y-6 text-xs text-slate-300">
                   <div className="flex items-center justify-between">

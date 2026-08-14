@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { Product, FilamentMaterial, ProductColor, StoreSettings } from '../types';
+import type { Product, ProductColor, StoreSettings } from '../types';
 import { ThreeDViewer } from './ThreeDViewer';
 import { generateWhatsAppLink } from '../utils/whatsapp';
 import { X, MessageSquare, CheckCircle2, Box } from 'lucide-react';
@@ -14,9 +14,9 @@ interface ProductModalProps {
 export const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, settings }) => {
   if (!product) return null;
 
-  const [selectedMaterial, setSelectedMaterial] = useState<FilamentMaterial>(
-    product.availableMaterials[0] || 'PLA'
-  );
+  const defaultMaterial = product.availableMaterials[0] || settings.customMaterials[0]?.name || 'PLA';
+  const [selectedMaterialName, setSelectedMaterialName] = useState<string>(defaultMaterial);
+
   const [selectedColor, setSelectedColor] = useState<ProductColor>(
     product.availableColors[0] || { name: 'Preto', hex: '#121212' }
   );
@@ -25,7 +25,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, se
   const [quantity, setQuantity] = useState<number>(1);
   const [customNotes, setCustomNotes] = useState<string>('');
 
-  const materialMultiplier = selectedMaterial === 'Resina' ? 1.4 : selectedMaterial === 'PETG' ? 1.15 : selectedMaterial === 'TPU' ? 1.3 : 1;
+  // Obter multiplicador do material selecionado de forma dinâmica
+  const currentMaterialObj = settings.customMaterials.find(
+    (m) => m.name.toLowerCase() === selectedMaterialName.toLowerCase()
+  );
+  const materialMultiplier = currentMaterialObj ? currentMaterialObj.priceMultiplier : 1.0;
+
   const scaleFactor = Math.pow(scaleMultiplier, 2.2);
   const infillFactor = 1 + (infillPercent - 20) * 0.005;
 
@@ -48,7 +53,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, se
       product,
       {
         productId: product.id,
-        material: selectedMaterial,
+        material: selectedMaterialName,
         color: selectedColor,
         scaleMultiplier,
         infillPercent,
@@ -83,6 +88,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, se
           
           <div className="lg:col-span-6 space-y-4">
             <ThreeDViewer
+              stlUrl={product.stlUrl}
               colorHex={selectedColor.hex}
               scale={scaleMultiplier}
             />
@@ -105,25 +111,26 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, se
 
           <div className="lg:col-span-6 space-y-6">
             
+            {/* Seletor de Materiais Dinâmicos */}
             <div>
               <label className="block text-xs font-mono text-slate-400 uppercase tracking-wider mb-2">
                 1. Escolha o Material do Filamento:
               </label>
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                {product.availableMaterials.map((mat) => {
-                  const isSelected = selectedMaterial === mat;
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {product.availableMaterials.map((matName) => {
+                  const isSelected = selectedMaterialName.toLowerCase() === matName.toLowerCase();
                   return (
                     <button
-                      key={mat}
+                      key={matName}
                       type="button"
-                      onClick={() => setSelectedMaterial(mat)}
+                      onClick={() => setSelectedMaterialName(matName)}
                       className={`px-3 py-2 rounded-xl text-xs font-mono font-bold transition-all text-center border ${
                         isSelected
                           ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20'
                           : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700'
                       }`}
                     >
-                      {mat}
+                      {matName}
                     </button>
                   );
                 })}

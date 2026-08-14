@@ -37,13 +37,26 @@ export const App: React.FC = () => {
       adminPinHash: '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',
       adminSalt: 'M3D_SALT_2026',
       currencySymbol: 'R$',
+      customMaterials: [
+        { id: 'pla', name: 'PLA', priceMultiplier: 1.0 },
+        { id: 'petg', name: 'PETG', priceMultiplier: 1.15 },
+        { id: 'abs', name: 'ABS', priceMultiplier: 1.1 },
+        { id: 'tpu', name: 'TPU', priceMultiplier: 1.3 },
+        { id: 'resina', name: 'Resina', priceMultiplier: 1.4 },
+      ],
     };
 
     try {
       const savedEncrypted = localStorage.getItem(STORAGE_KEY_SETTINGS);
       if (savedEncrypted) {
         const decrypted = decryptData<StoreSettings>(savedEncrypted);
-        if (decrypted && decrypted.storeName) return decrypted;
+        if (decrypted && decrypted.storeName) {
+          return {
+            ...defaultSettings,
+            ...decrypted,
+            customMaterials: decrypted.customMaterials || defaultSettings.customMaterials,
+          };
+        }
       }
     } catch (err) {
       console.warn('Usando configurações padrão da loja.');
@@ -92,8 +105,11 @@ export const App: React.FC = () => {
           return false;
         }
 
-        if (selectedMaterial !== 'all' && !product.availableMaterials.includes(selectedMaterial as any)) {
-          return false;
+        if (selectedMaterial !== 'all') {
+          const hasMaterial = product.availableMaterials.some(
+            (m) => m.toLowerCase() === selectedMaterial.toLowerCase()
+          );
+          if (!hasMaterial) return false;
         }
 
         return true;
@@ -113,7 +129,6 @@ export const App: React.FC = () => {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onOpenAdmin={() => setIsAdminOpen(true)}
-        onOpenCostCalc={() => setIsCostCalcOpen(true)}
         settings={settings}
       />
 
@@ -125,6 +140,7 @@ export const App: React.FC = () => {
           onSelectCategory={setSelectedCategory}
           selectedMaterial={selectedMaterial}
           onSelectMaterial={setSelectedMaterial}
+          materials={settings.customMaterials}
           sortBy={sortBy}
           onSortChange={setSortBy}
         />
@@ -179,6 +195,7 @@ export const App: React.FC = () => {
         onSaveProducts={handleSaveProducts}
         settings={settings}
         onSaveSettings={handleSaveSettings}
+        onOpenCostCalc={() => setIsCostCalcOpen(true)}
       />
 
       <CostCalculator
