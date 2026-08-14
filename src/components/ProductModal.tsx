@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { Product, ProductColor, StoreSettings } from '../types';
 import { ThreeDViewer } from './ThreeDViewer';
 import { generateWhatsAppLink } from '../utils/whatsapp';
-import { X, MessageSquare, CheckCircle2, Box } from 'lucide-react';
+import { X, MessageSquare, CheckCircle2, Box, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface ProductModalProps {
@@ -13,6 +13,21 @@ interface ProductModalProps {
 
 export const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, settings }) => {
   if (!product) return null;
+
+  // Lista agregada de todas as fotos do produto (imagem principal + galeria adicional)
+  const allImages = React.useMemo(() => {
+    const list: string[] = [];
+    if (product.imageUrl) list.push(product.imageUrl);
+    if (product.images && product.images.length > 0) {
+      product.images.forEach((img) => {
+        if (img && !list.includes(img)) list.push(img);
+      });
+    }
+    return list.length > 0 ? list : ['https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80'];
+  }, [product]);
+
+  const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
+  const [viewMode, setViewMode] = useState<'3d' | 'gallery'>('gallery');
 
   const defaultMaterial = product.availableMaterials[0] || settings.customMaterials[0]?.name || 'PLA';
   const [selectedMaterialName, setSelectedMaterialName] = useState<string>(defaultMaterial);
@@ -25,7 +40,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, se
   const [quantity, setQuantity] = useState<number>(1);
   const [customNotes, setCustomNotes] = useState<string>('');
 
-  // Obter multiplicador do material selecionado de forma dinâmica
   const currentMaterialObj = settings.customMaterials.find(
     (m) => m.name.toLowerCase() === selectedMaterialName.toLowerCase()
   );
@@ -41,6 +55,14 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, se
   const scaledX = Math.round(product.dimensions.x * scaleMultiplier);
   const scaledY = Math.round(product.dimensions.y * scaleMultiplier);
   const scaledZ = Math.round(product.dimensions.z * scaleMultiplier);
+
+  const handlePrevImage = () => {
+    setActiveImageIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1));
+  };
+
+  const handleNextImage = () => {
+    setActiveImageIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1));
+  };
 
   const handleWhatsAppQuote = () => {
     confetti({
@@ -71,6 +93,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, se
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-slate-950/80 backdrop-blur-md animate-fadeIn">
       <div className="relative w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden my-8 max-h-[90vh] flex flex-col">
         
+        {/* HEADER DO MODAL */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/50">
           <div className="flex items-center gap-2">
             <Box className="w-5 h-5 text-orange-400" />
@@ -84,15 +107,100 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, se
           </button>
         </div>
 
+        {/* CORPO DO MODAL */}
         <div className="p-6 overflow-y-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
           
+          {/* LADO ESQUERDO: GALERIA MAKERWORLD / VISUALIZADOR 3D */}
           <div className="lg:col-span-6 space-y-4">
-            <ThreeDViewer
-              stlUrl={product.stlUrl}
-              colorHex={selectedColor.hex}
-              scale={scaleMultiplier}
-            />
+            
+            {/* CONTAINER VISUALIZADOR (GALERIA OU 3D) */}
+            <div className="relative w-full h-[360px] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col justify-between group">
+              
+              {viewMode === '3d' ? (
+                /* MODO PREVIEW 3D INTERATIVO WEBGL */
+                <ThreeDViewer
+                  stlUrl={product.stlUrl}
+                  colorHex={selectedColor.hex}
+                  scale={scaleMultiplier}
+                />
+              ) : (
+                /* MODO GALERIA DE FOTOS MAKERWORLD */
+                <div className="relative w-full h-full bg-slate-950 flex items-center justify-center overflow-hidden">
+                  <img
+                    src={allImages[activeImageIndex]}
+                    alt={`${product.title} - foto ${activeImageIndex + 1}`}
+                    className="w-full h-full object-cover transition-all duration-300"
+                  />
 
+                  {/* Botões de Navegação Anterior e Próximo */}
+                  {allImages.length > 1 && (
+                    <>
+                      <button
+                        onClick={handlePrevImage}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-900/80 hover:bg-slate-900 border border-slate-700/60 text-white flex items-center justify-center shadow-lg transition-all"
+                        title="Foto Anterior"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+
+                      <button
+                        onClick={handleNextImage}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-900/80 hover:bg-slate-900 border border-slate-700/60 text-white flex items-center justify-center shadow-lg transition-all"
+                        title="Próxima Foto"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* BOTÃO FLUTUANTE DE ALTERNÂNCIA (GALERIA FOTOS VS PREVIEW 3D) */}
+              <div className="absolute bottom-3 left-3 z-10">
+                <button
+                  type="button"
+                  onClick={() => setViewMode(viewMode === '3d' ? 'gallery' : '3d')}
+                  className="px-3.5 py-2 rounded-xl bg-slate-900/90 backdrop-blur-md hover:bg-slate-900 border border-slate-700/80 text-white text-xs font-bold shadow-xl flex items-center gap-2 transition-all transform hover:scale-105"
+                >
+                  {viewMode === '3d' ? (
+                    <>
+                      <ImageIcon className="w-4 h-4 text-orange-400" />
+                      <span>📸 Ver Galeria de Fotos ({allImages.length})</span>
+                    </>
+                  ) : (
+                    <>
+                      <Box className="w-4 h-4 text-cyan-400 animate-pulse" />
+                      <span>🧊 Pré-visualização 3D</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+            </div>
+
+            {/* MINIATURAS DA GALERIA (THUMBNAILS CAROUSEL ESTILO MAKERWORLD) */}
+            {viewMode === 'gallery' && allImages.length > 0 && (
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                {allImages.map((img, idx) => {
+                  const isActive = idx === activeImageIndex;
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveImageIndex(idx)}
+                      className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 ${
+                        isActive
+                          ? 'border-emerald-500 ring-2 ring-emerald-500/30 scale-105'
+                          : 'border-slate-800 opacity-60 hover:opacity-100 hover:border-slate-600'
+                      }`}
+                    >
+                      <img src={img} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* ESPECIFICAÇÕES TÉCNICAS */}
             <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 text-xs text-slate-400 space-y-2">
               <div className="flex justify-between items-center text-slate-300 font-mono">
                 <span>Dimensões Finais Escalonadas:</span>
@@ -107,8 +215,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, se
                 <span>~{Math.round(product.printTimeHours * scaleFactor)} horas</span>
               </div>
             </div>
+
           </div>
 
+          {/* LADO DIREITO: FORMULÁRIO DE PERSONALIZAÇÃO */}
           <div className="lg:col-span-6 space-y-6">
             
             {/* Seletor de Materiais Dinâmicos */}

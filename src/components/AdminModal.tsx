@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { Product, StoreSettings, ProductCategory, CustomMaterial } from '../types';
 import { hashPassword } from '../services/security';
 import { APP_VERSION, APP_BUILD_DATE, CHANGELOG } from '../config/version';
-import { X, ShieldLock, Plus, Trash2, Edit3, Save, Download, Upload, Lock, Phone, Store, Key, GitCommit, CheckCircle2, History, Calculator, Layers, FileCode, UploadCloud } from 'lucide-react';
+import { X, ShieldLock, Plus, Trash2, Edit3, Save, Download, Upload, Lock, Phone, Store, Key, GitCommit, CheckCircle2, History, Calculator, Layers, FileCode, UploadCloud, Image as ImageIcon } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface AdminModalProps {
@@ -39,7 +39,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [newPin, setNewPin] = useState<string>('');
   const [saveMessage, setSaveMessage] = useState<string>('');
 
-  // Estados de Gerenciamento Dinâmico de Materiais
+  // Estados de Materiais Dinâmicos
   const [materialsList, setMaterialsList] = useState<CustomMaterial[]>(
     settings.customMaterials || [
       { id: 'pla', name: 'PLA', priceMultiplier: 1.0 },
@@ -66,7 +66,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     }
   };
 
-  // Upload Local de Arquivo 3D (.stl / .3mf) para Data URL
+  // Upload Local de Arquivo 3D (.stl / .3mf)
   const handleStlFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0] && editingProduct) {
       const file = e.target.files[0];
@@ -84,14 +84,57 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     }
   };
 
+  // Upload de Múltiplas Fotos do Computador
+  const handleMultipleImagesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0 && editingProduct) {
+      const filesArray = Array.from(e.target.files);
+      const currentImages = editingProduct.images || (editingProduct.imageUrl ? [editingProduct.imageUrl] : []);
+      const newImagesList: string[] = [...currentImages];
+
+      let loadedCount = 0;
+      filesArray.forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            newImagesList.push(event.target.result as string);
+            loadedCount++;
+            if (loadedCount === filesArray.length) {
+              setEditingProduct({
+                ...editingProduct,
+                imageUrl: editingProduct.imageUrl || newImagesList[0],
+                images: newImagesList,
+              });
+            }
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  // Remover Imagem da Galeria
+  const handleRemoveImageFromGallery = (indexToRemove: number) => {
+    if (!editingProduct || !editingProduct.images) return;
+    const updatedImages = editingProduct.images.filter((_, idx) => idx !== indexToRemove);
+    setEditingProduct({
+      ...editingProduct,
+      imageUrl: updatedImages[0] || editingProduct.imageUrl,
+      images: updatedImages,
+    });
+  };
+
   // Salvar Peça (Criar ou Editar)
   const handleSaveProduct = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct || !editingProduct.title) return;
 
+    const finalImages = editingProduct.images || (editingProduct.imageUrl ? [editingProduct.imageUrl] : []);
+
     if (editingProduct.id) {
       const updated = products.map((p) =>
-        p.id === editingProduct.id ? ({ ...p, ...editingProduct } as Product) : p
+        p.id === editingProduct.id
+          ? ({ ...p, ...editingProduct, images: finalImages } as Product)
+          : p
       );
       onSaveProducts(updated);
     } else {
@@ -111,9 +154,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
           { name: 'Ciano', hex: '#00F0FF' },
         ],
         stlUrl: editingProduct.stlUrl || '',
-        imageUrl:
-          editingProduct.imageUrl ||
-          'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
+        imageUrl: editingProduct.imageUrl || finalImages[0] || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
+        images: finalImages,
         featured: editingProduct.featured || false,
         inStock: editingProduct.inStock !== false,
         tags: editingProduct.tags || ['3D', 'Print'],
@@ -133,7 +175,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     }
   };
 
-  // Adicionar Novo Material Dinâmico
+  // Adicionar Material
   const handleAddMaterial = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMaterialName.trim()) return;
@@ -152,14 +194,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     confetti({ particleCount: 30, spread: 50 });
   };
 
-  // Excluir Material Dinâmico
+  // Excluir Material
   const handleDeleteMaterial = (id: string) => {
     const updated = materialsList.filter((m) => m.id !== id);
     setMaterialsList(updated);
     onSaveSettings({ ...settings, customMaterials: updated });
   };
 
-  // Salvar Configurações Gerais da Loja
+  // Salvar Configurações Gerais
   const handleSaveStoreSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     let updatedHash = settings.adminPinHash;
@@ -215,7 +257,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/85 backdrop-blur-md overflow-y-auto">
       <div className="relative w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden my-8 max-h-[90vh] flex flex-col">
         
-        {/* HEADER DO PAINEL ADMIN */}
+        {/* HEADER DO ADMIN */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950">
           <div className="flex items-center gap-2">
             <ShieldLock className="w-5 h-5 text-orange-400" />
@@ -228,7 +270,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 type="button"
                 onClick={onOpenCostCalc}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 text-xs font-bold hover:bg-cyan-500/30 transition-all"
-                title="Abrir Calculadora de Custos de Impressão 3D"
+                title="Abrir Calculadora de Custos 3D"
               >
                 <Calculator className="w-4 h-4" />
                 <span>Calculadora de Custos 3D</span>
@@ -289,7 +331,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Catálogo de Peças ({products.length})
+                Catálogo ({products.length})
               </button>
 
               <button
@@ -342,7 +384,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             {/* CONTEÚDO DAS TABS */}
             <div className="p-6 overflow-y-auto flex-1">
               
-              {/* TAB 1: PRODUTOS & UPLOAD 3D (.STL / .3MF) */}
+              {/* TAB 1: PRODUTOS, GALERIA DE FOTOS & MODELO 3D */}
               {activeTab === 'products' && (
                 <div className="space-y-6">
                   
@@ -366,6 +408,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           ],
                           stlUrl: '',
                           imageUrl: '',
+                          images: [],
                           inStock: true,
                         })
                       }
@@ -376,7 +419,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     </button>
                   </div>
 
-                  {/* FORMULÁRIO DE EDIÇÃO DE PRODUTO */}
+                  {/* FORMULÁRIO DE EDIÇÃO DA PEÇA */}
                   {editingProduct && (
                     <form onSubmit={handleSaveProduct} className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-4">
                       <h4 className="text-xs font-bold text-orange-400 font-mono">
@@ -424,14 +467,65 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         </div>
 
                         <div>
-                          <label className="block text-slate-400 mb-1">URL da Imagem / Foto:</label>
+                          <label className="block text-slate-400 mb-1">URL da Imagem Capa Principal:</label>
                           <input
                             type="text"
                             value={editingProduct.imageUrl || ''}
-                            onChange={(e) => setEditingProduct({ ...editingProduct, imageUrl: e.target.value })}
+                            onChange={(e) => {
+                              const newUrl = e.target.value;
+                              const currentImages = editingProduct.images || [];
+                              setEditingProduct({
+                                ...editingProduct,
+                                imageUrl: newUrl,
+                                images: newUrl && !currentImages.includes(newUrl) ? [newUrl, ...currentImages] : currentImages,
+                              });
+                            }}
                             className="w-full bg-slate-900 text-white p-2.5 rounded-xl border border-slate-800 focus:border-orange-500 focus:outline-none"
                             placeholder="https://..."
                           />
+                        </div>
+
+                        {/* BLOCO DE UPLOAD DE MÚLTIPLAS FOTOS DO PRODUTO */}
+                        <div className="sm:col-span-2 p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
+                          <div className="flex justify-between items-center">
+                            <label className="text-xs font-mono font-bold text-orange-400 flex items-center gap-1.5">
+                              <ImageIcon className="w-4 h-4" />
+                              Galeria de Fotos da Peça (Várias Imagens)
+                            </label>
+
+                            <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500/10 border border-orange-500/30 text-orange-400 hover:bg-orange-500/20 cursor-pointer font-bold text-xs transition-all">
+                              <UploadCloud className="w-4 h-4" />
+                              <span>+ Adicionar Várias Fotos</span>
+                              <input
+                                type="file"
+                                multiple
+                                accept="image/*"
+                                onChange={handleMultipleImagesUpload}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
+
+                          {/* GRID DE PREVIEW DAS FOTOS CARREGADAS */}
+                          {editingProduct.images && editingProduct.images.length > 0 ? (
+                            <div className="flex flex-wrap items-center gap-2 pt-1">
+                              {editingProduct.images.map((img, idx) => (
+                                <div key={idx} className="relative group w-16 h-16 rounded-xl overflow-hidden border border-slate-700 bg-slate-950">
+                                  <img src={img} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveImageFromGallery(idx)}
+                                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center opacity-80 group-hover:opacity-100 hover:bg-rose-700 transition-all shadow"
+                                    title="Remover foto"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-[11px] text-slate-500 italic">Nenhuma foto adicional adicionada. Você pode selecionar múltiplos arquivos JPG/PNG do seu computador.</p>
+                          )}
                         </div>
 
                         {/* UPLOAD DO MODELO 3D (.STL / .3MF) */}
@@ -505,6 +599,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     </form>
                   )}
 
+                  {/* LISTA DE PRODUTOS CADASTRADOS */}
                   <div className="space-y-3">
                     {products.map((p) => (
                       <div
@@ -516,6 +611,11 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           <div>
                             <h4 className="text-xs font-bold text-white flex items-center gap-2">
                               {p.title}
+                              {p.images && p.images.length > 1 && (
+                                <span className="px-2 py-0.5 rounded text-[9px] font-mono bg-orange-500/10 text-orange-400 border border-orange-500/30">
+                                  {p.images.length} FOTOS
+                                </span>
+                              )}
                               {p.stlUrl && (
                                 <span className="px-2 py-0.5 rounded text-[9px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
                                   3D MODEL
@@ -556,7 +656,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 <div className="space-y-6 text-xs text-slate-300">
                   <h3 className="text-sm font-bold text-white font-mono">GERENCIAMENTO DINÂMICO DE MATERIAIS & FILAMENTOS</h3>
 
-                  {/* CADASTRO DE NOVO MATERIAL */}
                   <form onSubmit={handleAddMaterial} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
                     <h4 className="text-xs font-bold text-orange-400 font-mono">CADASTRAR NOVO FILAMENTO / MATERIAL</h4>
 
@@ -597,7 +696,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     </div>
                   </form>
 
-                  {/* LISTA DE MATERIAIS */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {materialsList.map((mat) => (
                       <div key={mat.id} className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 flex justify-between items-center">

@@ -37,7 +37,8 @@ export interface Product {
   availableMaterials: string[]; // Lista de nomes de materiais (ex: ['PLA', 'PETG', 'Nylon'])
   availableColors: ProductColor[];
   stlUrl?: string; // URL web ou Data URL base64 do modelo 3D (.stl / .3mf)
-  imageUrl: string;
+  imageUrl: string; // Imagem/capa principal
+  images?: string[]; // Galeria de fotos adicionais da peça
   featured?: boolean;
   inStock: boolean;
   tags: string[];
@@ -56,15 +57,15 @@ export interface QuoteCustomization {
 
 export interface CostCalculationParams {
   filamentWeightGrams: number;
-  filamentCostPerKg: number; // Ex: R$ 120,00 por kg
+  filamentCostPerKg: number;
   printTimeHours: number;
   printTimeMinutes: number;
-  powerWatts: number; // Ex: 150W para impressoras FDM comuns
-  kwhCost: number; // Ex: R$ 0,95 por kWh
-  depreciationCostPerHour: number; // Ex: R$ 1,50 por hora de uso da máquina
-  failureRiskRatePercent: number; // Ex: 10% de taxa de perda
-  postProcessingLaborCost: number; // Ex: R$ 15,00 acabamento manual
-  desiredProfitMarginPercent: number; // Ex: 100% de margem sobre custo
+  powerWatts: number;
+  kwhCost: number;
+  depreciationCostPerHour: number;
+  failureRiskRatePercent: number;
+  postProcessingLaborCost: number;
+  desiredProfitMarginPercent: number;
 }
 
 export interface CostCalculationResult {
@@ -79,13 +80,13 @@ export interface CostCalculationResult {
 }
 
 export interface StoreSettings {
-  whatsappNumber: string; // Ex: 5511999999999
+  whatsappNumber: string;
   storeName: string;
   customMessageTemplate: string;
-  adminPinHash: string; // SHA-256 hash da senha
+  adminPinHash: string;
   adminSalt: string;
   currencySymbol: string;
-  customMaterials: CustomMaterial[]; // Materiais e filamentos dinâmicos
+  customMaterials: CustomMaterial[];
   githubRepo?: string;
   githubToken?: string;
 }
