@@ -18,7 +18,8 @@ const STORAGE_KEY_SETTINGS = 'm3d_store_settings';
 export const App: React.FC = () => {
   const [products, setProducts] = useState<Product[]>(() => {
     try {
-      const savedEncrypted = localStorage.getItem(STORAGE_KEY_PRODUCTS);
+      // Recuperação inteligente: tenta a nova chave m3d_ e a chave anterior mr3d_
+      const savedEncrypted = localStorage.getItem(STORAGE_KEY_PRODUCTS) || localStorage.getItem('mr3d_catalog_products');
       if (savedEncrypted) {
         const decrypted = decryptData<Product[]>(savedEncrypted);
         if (decrypted && Array.isArray(decrypted)) return decrypted;
@@ -47,7 +48,7 @@ export const App: React.FC = () => {
     };
 
     try {
-      const savedEncrypted = localStorage.getItem(STORAGE_KEY_SETTINGS);
+      const savedEncrypted = localStorage.getItem(STORAGE_KEY_SETTINGS) || localStorage.getItem('mr3d_store_settings');
       if (savedEncrypted) {
         const decrypted = decryptData<StoreSettings>(savedEncrypted);
         if (decrypted && decrypted.storeName) {
