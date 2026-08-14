@@ -42,6 +42,7 @@
       { "name": "Mármore Premium", "hex": "#E2E8F0" },
       { "name": "Cobre Metalizado", "hex": "#B45309" }
     ],
+    "stlUrl": "https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/models/stl/ascii/slotted_disk.stl",
     "imageUrl": "https://images.unsplash.com/photo-1615529182904-14819c35db37?auto=format&fit=crop&w=800&q=80",
     "images": [
       "https://images.unsplash.com/photo-1615529182904-14819c35db37?auto=format&fit=crop&w=800&q=80",
@@ -68,6 +69,7 @@
       { "name": "Vermelho Fogo", "hex": "#EF4444" },
       { "name": "Preto Fosco", "hex": "#18181B" }
     ],
+    "stlUrl": "https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/models/stl/ascii/slotted_disk.stl",
     "imageUrl": "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=800&q=80",
     "images": [
       "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=800&q=80",

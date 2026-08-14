@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
-import { Loader2, RotateCcw, Eye, Sparkles } from 'lucide-react';
+import { Loader2, RotateCcw, Eye, Sparkles, AlertCircle } from 'lucide-react';
 
 interface ThreeDViewerProps {
   stlUrl?: string;
@@ -9,6 +9,25 @@ interface ThreeDViewerProps {
   wireframe?: boolean;
   scale?: number;
   autoRotate?: boolean;
+}
+
+// Converter Data URL (Base64) diretamente para ArrayBuffer de forma síncrona e 100% confiável
+function dataUrlToArrayBuffer(dataUrl: string): ArrayBuffer {
+  const base64Index = dataUrl.indexOf(';base64,');
+  if (base64Index !== -1) {
+    const base64 = dataUrl.substring(base64Index + 8);
+    const binaryString = window.atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+  const commaIndex = dataUrl.indexOf(',');
+  const text = decodeURIComponent(dataUrl.substring(commaIndex + 1));
+  const encoder = new TextEncoder();
+  return encoder.encode(text).buffer;
 }
 
 export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
@@ -85,43 +104,63 @@ export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
     });
     materialRef.current = material;
 
-    // Carregamento Seguro de Arquivos STL (Data URLs Base64 ou URLs Web)
+    // Função interna para renderizar a geometria do STL
+    const renderStlBuffer = (buffer: ArrayBuffer) => {
+      try {
+        const loader = new STLLoader();
+        const geometry = loader.parse(buffer);
+        geometry.center();
+        geometry.computeVertexNormals();
+
+        // Autoscale para o tamanho ideal da câmera
+        geometry.computeBoundingBox();
+        const box = geometry.boundingBox;
+        if (box) {
+          const maxDim = Math.max(
+            box.max.x - box.min.x,
+            box.max.y - box.min.y,
+            box.max.z - box.min.z
+          );
+          const targetSize = 3.5;
+          const fitScale = maxDim > 0 ? targetSize / maxDim : 1;
+          geometry.scale(fitScale, fitScale, fitScale);
+        }
+
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(0, 0, 0);
+        meshRef.current = mesh;
+        scene.add(mesh);
+        setModelType('stl');
+        setLoading(false);
+      } catch (err) {
+        console.error('Erro ao fazer parse do STL:', err);
+        createFallbackMesh(scene, material);
+      }
+    };
+
+    // Carregamento Seguro de Arquivos STL
     if (stlUrl && stlUrl.trim().length > 0) {
       setLoading(true);
-      const loader = new STLLoader();
 
-      fetch(stlUrl)
-        .then((res) => res.arrayBuffer())
-        .then((buffer) => {
-          const geometry = loader.parse(buffer);
-          geometry.center();
-          geometry.computeVertexNormals();
-
-          // Ajustar escala do STL para o tamanho da câmera
-          geometry.computeBoundingBox();
-          const box = geometry.boundingBox;
-          if (box) {
-            const maxDim = Math.max(
-              box.max.x - box.min.x,
-              box.max.y - box.min.y,
-              box.max.z - box.min.z
-            );
-            const targetSize = 3.5;
-            const fitScale = maxDim > 0 ? targetSize / maxDim : 1;
-            geometry.scale(fitScale, fitScale, fitScale);
-          }
-
-          const mesh = new THREE.Mesh(geometry, material);
-          mesh.position.set(0, 0, 0);
-          meshRef.current = mesh;
-          scene.add(mesh);
-          setModelType('stl');
-          setLoading(false);
-        })
-        .catch((error) => {
-          console.warn('Erro ao processar ArrayBuffer do STL, carregando renderizador de demonstração:', error);
+      if (stlUrl.startsWith('data:')) {
+        // Data URL local enviada via upload do computador
+        try {
+          const buffer = dataUrlToArrayBuffer(stlUrl);
+          renderStlBuffer(buffer);
+        } catch (e) {
+          console.error('Erro ao converter Data URL base64:', e);
           createFallbackMesh(scene, material);
-        });
+        }
+      } else {
+        // Link web HTTP/HTTPS
+        fetch(stlUrl)
+          .then((res) => res.arrayBuffer())
+          .then((buffer) => renderStlBuffer(buffer))
+          .catch((error) => {
+            console.warn('Erro ao carregar URL web do STL:', error);
+            createFallbackMesh(scene, material);
+          });
+      }
     } else {
       createFallbackMesh(scene, material);
     }
@@ -226,7 +265,7 @@ export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm z-20 text-orange-500">
           <Loader2 className="w-8 h-8 animate-spin mb-2" />
-          <span className="text-xs font-mono tracking-widest text-slate-400">CARREGANDO GEOMETRIA 3D...</span>
+          <span className="text-xs font-mono tracking-widest text-slate-400">PROCESSANDO MALHA 3D...</span>
         </div>
       )}
 
@@ -240,10 +279,21 @@ export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
       />
 
       <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-700/50 flex items-center gap-2 pointer-events-none">
-        <Sparkles className="w-3.5 h-3.5 text-orange-400 animate-pulse" />
-        <span className="text-[11px] font-medium text-slate-300">
-          {modelType === 'stl' ? 'Modelo STL Real Renderizado' : 'Preview 3D Interativo'} • Arraste para girar
-        </span>
+        {modelType === 'stl' ? (
+          <>
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+            <span className="text-[11px] font-medium text-emerald-300">
+              Modelo STL Real Renderizado • Arraste para girar
+            </span>
+          </>
+        ) : (
+          <>
+            <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-[11px] font-medium text-amber-300">
+              Sem STL Anexado (Preview Genérico) • Faça upload do STL no Admin
+            </span>
+          </>
+        )}
       </div>
 
       <div className="absolute bottom-3 right-3 flex items-center gap-2 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-700/60 shadow-lg">
