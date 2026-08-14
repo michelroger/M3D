@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import type { Product, StoreSettings, ProductCategory } from '../types';
 import { hashPassword } from '../services/security';
-import { X, ShieldLock, Plus, Trash2, Edit3, Save, Download, Upload, Lock, Phone, Store, Key } from 'lucide-react';
+import { APP_VERSION, APP_BUILD_DATE, CHANGELOG } from '../config/version';
+import { X, ShieldLock, Plus, Trash2, Edit3, Save, Download, Upload, Lock, Phone, Store, Key, GitCommit, CheckCircle2, History } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface AdminModalProps {
@@ -27,7 +28,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [pinInput, setPinInput] = useState<string>('');
   const [pinError, setPinError] = useState<string>('');
 
-  const [activeTab, setActiveTab] = useState<'products' | 'settings' | 'sync'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'settings' | 'sync' | 'changelog'>('products');
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
 
   const [whatsappNumber, setWhatsappNumber] = useState<string>(settings.whatsappNumber);
@@ -193,21 +194,21 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden">
             
-            <div className="flex items-center gap-2 px-6 pt-4 border-b border-slate-800 bg-slate-950/40">
+            <div className="flex items-center gap-2 px-6 pt-4 border-b border-slate-800 bg-slate-950/40 overflow-x-auto">
               <button
                 onClick={() => setActiveTab('products')}
-                className={`px-4 py-2.5 rounded-t-xl text-xs font-semibold transition-all border-b-2 ${
+                className={`px-4 py-2.5 rounded-t-xl text-xs font-semibold transition-all border-b-2 whitespace-nowrap ${
                   activeTab === 'products'
                     ? 'border-orange-500 text-orange-400 bg-slate-900'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Catálogo de Peças ({products.length})
+                Catálogo ({products.length})
               </button>
 
               <button
                 onClick={() => setActiveTab('settings')}
-                className={`px-4 py-2.5 rounded-t-xl text-xs font-semibold transition-all border-b-2 ${
+                className={`px-4 py-2.5 rounded-t-xl text-xs font-semibold transition-all border-b-2 whitespace-nowrap ${
                   activeTab === 'settings'
                     ? 'border-orange-500 text-orange-400 bg-slate-900'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -218,13 +219,25 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
               <button
                 onClick={() => setActiveTab('sync')}
-                className={`px-4 py-2.5 rounded-t-xl text-xs font-semibold transition-all border-b-2 ${
+                className={`px-4 py-2.5 rounded-t-xl text-xs font-semibold transition-all border-b-2 whitespace-nowrap ${
                   activeTab === 'sync'
                     ? 'border-orange-500 text-orange-400 bg-slate-900'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
                 Exportar / GitHub Sync
+              </button>
+
+              <button
+                onClick={() => setActiveTab('changelog')}
+                className={`px-4 py-2.5 rounded-t-xl text-xs font-semibold transition-all border-b-2 whitespace-nowrap flex items-center gap-1.5 ${
+                  activeTab === 'changelog'
+                    ? 'border-cyan-500 text-cyan-400 bg-slate-900'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <History className="w-3.5 h-3.5" />
+                <span>Versões & CI/CD</span>
               </button>
             </div>
 
@@ -478,6 +491,65 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       onChange={handleImportJSON}
                       className="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700"
                     />
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: CONTROLE DE VERSÃO E CHANGELOG */}
+              {activeTab === 'changelog' && (
+                <div className="space-y-6 text-xs text-slate-300">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-white font-mono">CONTROLE DE VERSÃO & AUTOMATION CI/CD</h3>
+                      <p className="text-[11px] text-slate-400">Status atual da versão e esteira de publicação automática</p>
+                    </div>
+
+                    <div className="px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono font-bold">
+                      v{APP_VERSION} ({APP_BUILD_DATE})
+                    </div>
+                  </div>
+
+                  {/* CARD STATUS CI/CD GITHUB ACTIONS */}
+                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-emerald-400 font-bold flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        Pipeline de Publicação Automática (CI/CD GitHub Actions)
+                      </span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        ATIVO
+                      </span>
+                    </div>
+
+                    <p className="text-slate-400 leading-relaxed">
+                      O arquivo <code className="text-cyan-400">.github/workflows/deploy.yml</code> está ativo. A cada commit realizado na branch <code className="text-orange-400">main</code>, o GitHub compila e publica o site automaticamente no GitHub Pages!
+                    </p>
+                  </div>
+
+                  {/* REGISTRO DE VERSÕES (CHANGELOG) */}
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-mono font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <GitCommit className="w-4 h-4 text-orange-400" />
+                      Histórico de Versões e Melhorias
+                    </h4>
+
+                    {CHANGELOG.map((item) => (
+                      <div key={item.version} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                        <div className="flex justify-between items-center font-mono">
+                          <span className="text-orange-400 font-bold text-sm">v{item.version} • {item.title}</span>
+                          <span className="text-slate-500 text-[10px]">{item.date}</span>
+                        </div>
+
+                        <ul className="space-y-1.5 pt-1 text-slate-300">
+                          {item.changes.map((change, idx) => (
+                            <li key={idx} className="flex items-start gap-2">
+                              <span className="text-cyan-400 font-mono">•</span>
+                              <span>{change}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
