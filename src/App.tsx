@@ -21,12 +21,21 @@ export const App: React.FC = () => {
       const savedEncrypted = localStorage.getItem(STORAGE_KEY_PRODUCTS) || localStorage.getItem('mr3d_catalog_products');
       if (savedEncrypted) {
         const decrypted = decryptData<Product[]>(savedEncrypted);
-        if (decrypted && Array.isArray(decrypted)) {
-          // Mesclagem Inteligente: Mantém o catálogo oficial do repositório (catalog.json) 
-          // E adiciona as peças novas cadastradas localmente pelo Admin!
-          const defaultIds = new Set((defaultCatalog as Product[]).map((p) => p.id));
-          const customUserProducts = decrypted.filter((p) => !defaultIds.has(p.id));
-          return [...(defaultCatalog as Product[]), ...customUserProducts];
+        if (decrypted && Array.isArray(decrypted) && decrypted.length > 0) {
+          // As edições e criações do usuário no LocalStorage têm PRIORIDADE MÁXIMA
+          const userMap = new Map<string, Product>();
+          decrypted.forEach((p) => {
+            if (p && p.id) userMap.set(p.id, p);
+          });
+
+          // Adicionar itens padrão do catalog.json apenas se o usuário ainda não tiver mexido neles
+          (defaultCatalog as Product[]).forEach((defProd) => {
+            if (!userMap.has(defProd.id)) {
+              userMap.set(defProd.id, defProd);
+            }
+          });
+
+          return Array.from(userMap.values());
         }
       }
     } catch (err) {
