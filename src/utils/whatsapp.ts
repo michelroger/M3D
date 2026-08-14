@@ -1,32 +1,33 @@
 import type { Product, QuoteCustomization, StoreSettings } from '../types';
 
-export function generateWhatsAppLink(
+export const generateWhatsAppLink = (
   product: Product,
   customization: QuoteCustomization,
   settings: StoreSettings
-): string {
-  const cleanPhone = settings.whatsappNumber.replace(/\D/g, '');
-  
+): string => {
   const scaledX = Math.round(product.dimensions.x * customization.scaleMultiplier);
   const scaledY = Math.round(product.dimensions.y * customization.scaleMultiplier);
   const scaledZ = Math.round(product.dimensions.z * customization.scaleMultiplier);
 
-  const message = `Olá, *${settings.storeName}*! 👋
+  const printModeLabel = customization.printMode === 'ams'
+    ? '🌈 Com AMS (Multicolor / Bambu Lab)'
+    : '🧱 Sem AMS (Monocromático / Cor Única)';
 
-Gostaria de solicitar um orçamento personalizado para a peça 3D:
+  const message = `Olá ${settings.storeName}! Gostaria de solicitar um orçamento para a peça 3D:
 
-🧊 *Peça*: ${product.title}
-🆔 *Código*: ${product.id}
-🎨 *Cor Escolhida*: ${customization.color.name}
-🧵 *Material*: ${customization.material}
-📐 *Dimensões Estimadas*: ${scaledX} x ${scaledY} x ${scaledZ} mm (Escala ${(customization.scaleMultiplier * 100).toFixed(0)}%)
-🎯 *Preenchimento (Infill)*: ${customization.infillPercent}%
-📦 *Quantidade*: ${customization.quantity} unidade(s)
-💰 *Estimativa de Valor*: R$ ${customization.calculatedPrice.toFixed(2)}
+📦 *PRODUTO:* ${product.title}
+🧊 *MODO DE IMPRESSÃO:* ${printModeLabel}
+🧵 *MATERIAL:* ${customization.material}
+🎨 *COR SELECIONADA:* ${customization.color.name}
+📏 *ESCALA:* ${(customization.scaleMultiplier * 100).toFixed(0)}% (${scaledX} × ${scaledY} × ${scaledZ} mm)
+🔬 *INFILL:* ${customization.infillPercent}%
+🔢 *QUANTIDADE:* ${customization.quantity} unidade(s)
+${customization.customNotes ? `📝 *OBSERVAÇÕES:* ${customization.customNotes}\n` : ''}
+💰 *VALOR ESTIMADO:* R$ ${customization.calculatedPrice.toFixed(2)}
 
-${customization.customNotes ? `📝 *Observações / Pedido Especial*:\n"${customization.customNotes}"\n` : ''}
-Poderia me confirmar a disponibilidade e prazo de produção?`;
+Podemos confirmar a produção e o prazo de entrega?`;
 
   const encodedMessage = encodeURIComponent(message);
+  const cleanPhone = settings.whatsappNumber.replace(/\D/g, '');
   return `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
-}
+};

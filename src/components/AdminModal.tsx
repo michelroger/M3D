@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { Product, StoreSettings, ProductCategory, CustomMaterial, ProductColor } from '../types';
 import { hashPassword } from '../services/security';
 import { APP_VERSION, APP_BUILD_DATE, CHANGELOG } from '../config/version';
-import { X, ShieldLock, Plus, Trash2, Edit3, Save, Download, Upload, Lock, Phone, Store, Key, GitCommit, CheckCircle2, History, Calculator, Layers, FileCode, UploadCloud, Image as ImageIcon, Palette, Check } from 'lucide-react';
+import { X, ShieldLock, Plus, Trash2, Edit3, Save, Download, Upload, Lock, Phone, Store, Key, GitCommit, CheckCircle2, History, Calculator, Layers, FileCode, UploadCloud, Image as ImageIcon, Palette, Check, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface AdminModalProps {
@@ -16,6 +16,7 @@ interface AdminModalProps {
 }
 
 const DEFAULT_GLOBAL_COLORS: ProductColor[] = [
+  { name: 'Todas as Cores / Multicolor (AMS)', hex: 'gradient' },
   { name: 'Preto Stealth', hex: '#121212' },
   { name: 'Branco Neve', hex: '#F8FAFC' },
   { name: 'Laranja Neon', hex: '#FF5500' },
@@ -63,7 +64,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [newMaterialName, setNewMaterialName] = useState<string>('');
   const [newMaterialMultiplier, setNewMaterialMultiplier] = useState<number>(1.0);
 
-  // Estados da Paleta Global de Cores da Loja
+  // Estados da Paleta Global de Cores
   const [globalColorsList, setGlobalColorsList] = useState<ProductColor[]>(
     settings.globalColors || DEFAULT_GLOBAL_COLORS
   );
@@ -102,7 +103,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     }
   };
 
-  // Upload de Múltiplas Fotos do Computador
+  // Upload de Múltiplas Fotos
   const handleMultipleImagesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0 && editingProduct) {
       const filesArray = Array.from(e.target.files);
@@ -141,7 +142,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     });
   };
 
-  // Alternar Seleção de Cor para o Produto em Edição
+  // Alternar Seleção de Cor para o Produto
   const handleToggleProductColor = (colorObj: ProductColor) => {
     if (!editingProduct) return;
     const currentColors = editingProduct.availableColors || [];
@@ -189,6 +190,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         printTimeHours: editingProduct.printTimeHours || 4,
         availableMaterials: editingProduct.availableMaterials || materialsList.map((m) => m.name),
         availableColors: finalColors,
+        supportsAMS: editingProduct.supportsAMS !== false,
         stlUrl: editingProduct.stlUrl || '',
         imageUrl: editingProduct.imageUrl || finalImages[0] || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
         images: finalImages,
@@ -211,7 +213,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     }
   };
 
-  // Adicionar Novo Material Dinâmico
+  // Adicionar Material
   const handleAddMaterial = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMaterialName.trim()) return;
@@ -230,14 +232,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     confetti({ particleCount: 30, spread: 50 });
   };
 
-  // Excluir Material Dinâmico
+  // Excluir Material
   const handleDeleteMaterial = (id: string) => {
     const updated = materialsList.filter((m) => m.id !== id);
     setMaterialsList(updated);
     onSaveSettings({ ...settings, customMaterials: updated, globalColors: globalColorsList });
   };
 
-  // Adicionar Nova Cor Global à Loja
+  // Adicionar Cor Global
   const handleAddGlobalColor = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newColorName.trim()) return;
@@ -262,7 +264,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     onSaveSettings({ ...settings, customMaterials: materialsList, globalColors: updated });
   };
 
-  // Salvar Configurações Gerais da Loja
+  // Salvar Configurações Gerais
   const handleSaveStoreSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     let updatedHash = settings.adminPinHash;
@@ -319,7 +321,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/85 backdrop-blur-md overflow-y-auto">
       <div className="relative w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden my-8 max-h-[90vh] flex flex-col">
         
-        {/* HEADER DO PAINEL ADMIN */}
+        {/* HEADER DO ADMIN */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950">
           <div className="flex items-center gap-2">
             <ShieldLock className="w-5 h-5 text-orange-400" />
@@ -332,7 +334,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 type="button"
                 onClick={onOpenCostCalc}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 text-xs font-bold hover:bg-cyan-500/30 transition-all"
-                title="Abrir Calculadora de Custos de Impressão 3D"
+                title="Abrir Calculadora de Custos 3D"
               >
                 <Calculator className="w-4 h-4" />
                 <span>Calculadora de Custos 3D</span>
@@ -446,7 +448,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             {/* CONTEÚDO DAS TABS */}
             <div className="p-6 overflow-y-auto flex-1">
               
-              {/* TAB 1: PRODUTOS, CORES DA PEÇA, FOTOS E MODELO 3D */}
+              {/* TAB 1: PRODUTOS & SUPORTE AMS */}
               {activeTab === 'products' && (
                 <div className="space-y-6">
                   
@@ -463,7 +465,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           weightGrams: 100,
                           printTimeHours: 4,
                           availableMaterials: materialsList.map((m) => m.name),
-                          availableColors: globalColorsList.slice(0, 3),
+                          availableColors: globalColorsList.slice(0, 4),
+                          supportsAMS: true,
                           stlUrl: '',
                           imageUrl: '',
                           images: [],
@@ -477,7 +480,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     </button>
                   </div>
 
-                  {/* FORMULÁRIO DE EDIÇÃO DA PEÇA */}
+                  {/* FORMULÁRIO DE EDIÇÃO */}
                   {editingProduct && (
                     <form onSubmit={handleSaveProduct} className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-4">
                       <h4 className="text-xs font-bold text-orange-400 font-mono">
@@ -543,6 +546,23 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           />
                         </div>
 
+                        {/* FLAG DE SUPORTE AMS (MULTICOLOR) */}
+                        <div className="sm:col-span-2 p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-pink-400" />
+                            <div>
+                              <span className="font-mono font-bold text-white block text-xs">Suporta Impressão Multicolorida (AMS / Bambu Lab)?</span>
+                              <span className="text-[10px] text-slate-400">Permite ao cliente escolher entre impressão Com AMS (Multicolor) ou Sem AMS (Cor Única).</span>
+                            </div>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={editingProduct.supportsAMS !== false}
+                            onChange={(e) => setEditingProduct({ ...editingProduct, supportsAMS: e.target.checked })}
+                            className="w-4 h-4 accent-pink-500 rounded cursor-pointer"
+                          />
+                        </div>
+
                         {/* SELETOR INTERATIVO DE CORES DISPONÍVEIS PARA A PEÇA */}
                         <div className="sm:col-span-2 p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
                           <label className="block text-xs font-mono font-bold text-orange-400 flex items-center gap-1.5">
@@ -554,6 +574,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             {globalColorsList.map((col, idx) => {
                               const selectedColors = editingProduct.availableColors || [];
                               const isChecked = selectedColors.some((c) => c.hex.toLowerCase() === col.hex.toLowerCase());
+                              const isRainbow = col.hex === 'gradient' || col.hex.includes('gradient');
 
                               return (
                                 <button
@@ -568,7 +589,11 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                                 >
                                   <span
                                     className="w-3.5 h-3.5 rounded-full border border-slate-700 shadow-inner flex items-center justify-center"
-                                    style={{ backgroundColor: col.hex }}
+                                    style={{
+                                      background: isRainbow
+                                        ? 'linear-gradient(135deg, #ef4444, #f59e0b, #10b981, #06b6d4, #8b5cf6)'
+                                        : col.hex,
+                                    }}
                                   >
                                     {isChecked && <Check className="w-2.5 h-2.5 text-white" />}
                                   </span>
@@ -579,7 +604,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           </div>
                         </div>
 
-                        {/* BLOCO DE UPLOAD DE MÚLTIPLAS FOTOS DO PRODUTO */}
+                        {/* GALERIA DE FOTOS */}
                         <div className="sm:col-span-2 p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
                           <div className="flex justify-between items-center">
                             <label className="text-xs font-mono font-bold text-orange-400 flex items-center gap-1.5">
@@ -617,7 +642,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                               ))}
                             </div>
                           ) : (
-                            <p className="text-[11px] text-slate-500 italic">Nenhuma foto adicional adicionada. Você pode selecionar múltiplos arquivos JPG/PNG do seu computador.</p>
+                            <p className="text-[11px] text-slate-500 italic">Nenhuma foto adicional adicionada.</p>
                           )}
                         </div>
 
@@ -692,7 +717,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     </form>
                   )}
 
-                  {/* LISTA DE PRODUTOS CADASTRADOS */}
+                  {/* LISTA DE PRODUTOS */}
                   <div className="space-y-3">
                     {products.map((p) => (
                       <div
@@ -704,14 +729,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           <div>
                             <h4 className="text-xs font-bold text-white flex items-center gap-2">
                               {p.title}
+                              {p.supportsAMS !== false && (
+                                <span className="px-2 py-0.5 rounded text-[9px] font-mono bg-pink-500/10 text-pink-400 border border-pink-500/30">
+                                  AMS READY
+                                </span>
+                              )}
                               {p.images && p.images.length > 1 && (
                                 <span className="px-2 py-0.5 rounded text-[9px] font-mono bg-orange-500/10 text-orange-400 border border-orange-500/30">
                                   {p.images.length} FOTOS
-                                </span>
-                              )}
-                              {p.stlUrl && (
-                                <span className="px-2 py-0.5 rounded text-[9px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                                  3D MODEL
                                 </span>
                               )}
                             </h4>
@@ -744,12 +769,11 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 </div>
               )}
 
-              {/* TAB 2: GERENCIAMENTO DINÂMICO DE MATERIAIS & PALETA GLOBAL DE CORES */}
+              {/* TAB 2: GERENCIAMENTO DE MATERIAIS & CORES */}
               {activeTab === 'materials' && (
                 <div className="space-y-6 text-xs text-slate-300">
                   <h3 className="text-sm font-bold text-white font-mono">GERENCIAMENTO DINÂMICO DE MATERIAIS & PALETA DE CORES</h3>
 
-                  {/* 1. CADASTRO DE FILAMENTOS */}
                   <form onSubmit={handleAddMaterial} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
                     <h4 className="text-xs font-bold text-orange-400 font-mono">CADASTRAR NOVO FILAMENTO / MATERIAL</h4>
 
@@ -790,7 +814,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     </div>
                   </form>
 
-                  {/* LISTA DE MATERIAIS */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {materialsList.map((mat) => (
                       <div key={mat.id} className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 flex justify-between items-center">
@@ -810,7 +833,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     ))}
                   </div>
 
-                  {/* 2. CADASTRO DA PALETA GLOBAL DE CORES */}
                   <form onSubmit={handleAddGlobalColor} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3 pt-6 border-t border-slate-800/80">
                     <h4 className="text-xs font-bold text-cyan-400 font-mono flex items-center gap-1.5">
                       <Palette className="w-4 h-4" />
@@ -861,27 +883,33 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     </div>
                   </form>
 
-                  {/* LISTA DA PALETA DE CORES */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {globalColorsList.map((col, idx) => (
-                      <div key={idx} className="p-3 rounded-2xl bg-slate-950 border border-slate-800 flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="w-5 h-5 rounded-full border border-slate-700 shadow-inner"
-                            style={{ backgroundColor: col.hex }}
-                          />
-                          <span className="font-bold text-white text-xs truncate max-w-[80px]">{col.name}</span>
-                        </div>
+                    {globalColorsList.map((col, idx) => {
+                      const isRainbow = col.hex === 'gradient' || col.hex.includes('gradient');
+                      return (
+                        <div key={idx} className="p-3 rounded-2xl bg-slate-950 border border-slate-800 flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="w-5 h-5 rounded-full border border-slate-700 shadow-inner"
+                              style={{
+                                background: isRainbow
+                                  ? 'linear-gradient(135deg, #ef4444, #f59e0b, #10b981, #06b6d4, #8b5cf6)'
+                                  : col.hex,
+                              }}
+                            />
+                            <span className="font-bold text-white text-xs truncate max-w-[80px]">{col.name}</span>
+                          </div>
 
-                        <button
-                          onClick={() => handleDeleteGlobalColor(col.hex)}
-                          className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
-                          title="Excluir Cor"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
+                          <button
+                            onClick={() => handleDeleteGlobalColor(col.hex)}
+                            className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
+                            title="Excluir Cor"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
 
                 </div>
