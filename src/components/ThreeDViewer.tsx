@@ -76,26 +76,28 @@ export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
     containerRef.current.appendChild(renderer.domElement);
 
     // Material 3D Base
+    const displayColor = colorHex === 'gradient' ? '#FF5500' : colorHex;
     const material = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(colorHex),
+      color: new THREE.Color(displayColor),
       metalness: 0.3,
       roughness: 0.25,
       wireframe: isWireframe,
     });
     materialRef.current = material;
 
-    // Tentar Carregar Arquivo STL ou Geometria Demo
+    // Carregamento Seguro de Arquivos STL (Data URLs Base64 ou URLs Web)
     if (stlUrl && stlUrl.trim().length > 0) {
       setLoading(true);
       const loader = new STLLoader();
 
-      loader.load(
-        stlUrl,
-        (geometry) => {
+      fetch(stlUrl)
+        .then((res) => res.arrayBuffer())
+        .then((buffer) => {
+          const geometry = loader.parse(buffer);
           geometry.center();
           geometry.computeVertexNormals();
 
-          // Ajustar escala para caber na câmera
+          // Ajustar escala do STL para o tamanho da câmera
           geometry.computeBoundingBox();
           const box = geometry.boundingBox;
           if (box) {
@@ -115,13 +117,11 @@ export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
           scene.add(mesh);
           setModelType('stl');
           setLoading(false);
-        },
-        undefined,
-        (error) => {
-          console.warn('Erro ao carregar modelo STL, usando renderizador geométrico:', error);
+        })
+        .catch((error) => {
+          console.warn('Erro ao processar ArrayBuffer do STL, carregando renderizador de demonstração:', error);
           createFallbackMesh(scene, material);
-        }
-      );
+        });
     } else {
       createFallbackMesh(scene, material);
     }
@@ -174,7 +174,8 @@ export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
   // Atualizar Cor
   useEffect(() => {
     if (materialRef.current) {
-      materialRef.current.color.set(colorHex);
+      const displayColor = colorHex === 'gradient' ? '#FF5500' : colorHex;
+      materialRef.current.color.set(displayColor);
     }
   }, [colorHex]);
 
@@ -225,7 +226,7 @@ export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm z-20 text-orange-500">
           <Loader2 className="w-8 h-8 animate-spin mb-2" />
-          <span className="text-xs font-mono tracking-widest text-slate-400">PROCESSANDO ARQUIVO 3D...</span>
+          <span className="text-xs font-mono tracking-widest text-slate-400">CARREGANDO GEOMETRIA 3D...</span>
         </div>
       )}
 
@@ -241,7 +242,7 @@ export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
       <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-700/50 flex items-center gap-2 pointer-events-none">
         <Sparkles className="w-3.5 h-3.5 text-orange-400 animate-pulse" />
         <span className="text-[11px] font-medium text-slate-300">
-          {modelType === 'stl' ? 'Modelo STL/3MF Real Renderizado' : 'Preview 3D Interativo'} • Arraste para girar
+          {modelType === 'stl' ? 'Modelo STL Real Renderizado' : 'Preview 3D Interativo'} • Arraste para girar
         </span>
       </div>
 

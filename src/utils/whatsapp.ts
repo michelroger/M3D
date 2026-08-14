@@ -10,24 +10,31 @@ export const generateWhatsAppLink = (
   const scaledZ = Math.round(product.dimensions.z * customization.scaleMultiplier);
 
   const printModeLabel = customization.printMode === 'ams'
-    ? '🌈 Com AMS (Multicolor / Bambu Lab)'
-    : '🧱 Sem AMS (Monocromático / Cor Única)';
+    ? 'Com AMS (Multicolor)'
+    : 'Sem AMS (Cor Unica / Monocromatico)';
 
-  const message = `Olá ${settings.storeName}! Gostaria de solicitar um orçamento para a peça 3D:
+  const lines = [
+    `Ola ${settings.storeName}! Gostaria de solicitar um orcamento para a peca 3D:`,
+    '',
+    `*PRODUTO:* ${product.title}`,
+    `*MODO DE IMPRESSAO:* ${printModeLabel}`,
+    `*MATERIAL:* ${customization.material}`,
+    `*COR SELECIONADA:* ${customization.color.name}`,
+    `*ESCALA:* ${(customization.scaleMultiplier * 100).toFixed(0)}% (${scaledX} x ${scaledY} x ${scaledZ} mm)`,
+    `*PREENCHIMENTO (INFILL):* ${customization.infillPercent}%`,
+    `*QUANTIDADE:* ${customization.quantity} unidade(s)`,
+  ];
 
-📦 *PRODUTO:* ${product.title}
-🧊 *MODO DE IMPRESSÃO:* ${printModeLabel}
-🧵 *MATERIAL:* ${customization.material}
-🎨 *COR SELECIONADA:* ${customization.color.name}
-📏 *ESCALA:* ${(customization.scaleMultiplier * 100).toFixed(0)}% (${scaledX} × ${scaledY} × ${scaledZ} mm)
-🔬 *INFILL:* ${customization.infillPercent}%
-🔢 *QUANTIDADE:* ${customization.quantity} unidade(s)
-${customization.customNotes ? `📝 *OBSERVAÇÕES:* ${customization.customNotes}\n` : ''}
-💰 *VALOR ESTIMADO:* R$ ${customization.calculatedPrice.toFixed(2)}
+  if (customization.customNotes) {
+    lines.push(`*OBSERVACOES:* ${customization.customNotes}`);
+  }
 
-Podemos confirmar a produção e o prazo de entrega?`;
+  lines.push(`*VALOR ESTIMADO:* R$ ${customization.calculatedPrice.toFixed(2)}`);
+  lines.push('');
+  lines.push('Podemos confirmar a producao e o prazo de entrega?');
 
-  const encodedMessage = encodeURIComponent(message);
+  const text = lines.join('\n');
+  const encodedText = encodeURIComponent(text);
   const cleanPhone = settings.whatsappNumber.replace(/\D/g, '');
-  return `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+  return `https://wa.me/${cleanPhone}?text=${encodedText}`;
 };
