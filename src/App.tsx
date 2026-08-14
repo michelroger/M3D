@@ -12,8 +12,8 @@ import { CostCalculator } from './components/CostCalculator';
 import { Footer } from './components/Footer';
 import { AlertCircle } from 'lucide-react';
 
-const STORAGE_KEY_PRODUCTS = 'mr3d_catalog_products';
-const STORAGE_KEY_SETTINGS = 'mr3d_store_settings';
+const STORAGE_KEY_PRODUCTS = 'm3d_catalog_products';
+const STORAGE_KEY_SETTINGS = 'm3d_store_settings';
 
 export const App: React.FC = () => {
   const [products, setProducts] = useState<Product[]>(() => {
@@ -32,10 +32,10 @@ export const App: React.FC = () => {
   const [settings, setSettings] = useState<StoreSettings>(() => {
     const defaultSettings: StoreSettings = {
       whatsappNumber: '5511999999999',
-      storeName: 'Mr3D Maker Studio',
+      storeName: 'M3D Maker Studio',
       customMessageTemplate: '',
       adminPinHash: '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',
-      adminSalt: 'MR3D_SALT_2026',
+      adminSalt: 'M3D_SALT_2026',
       currencySymbol: 'R$',
     };
 

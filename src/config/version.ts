@@ -12,7 +12,7 @@ export const CHANGELOG: VersionRelease[] = [
   {
     version: '1.0.0',
     date: '2026-08-14',
-    title: 'Lançamento Oficial da Plataforma Mr3D',
+    title: 'Lançamento Oficial da Plataforma M3D',
     changes: [
       'Vitrine interativa de peças 3D estilo MakerWorld',
       'Visualizador 3D WebGL com rotação, zoom e troca dinâmica de cores',

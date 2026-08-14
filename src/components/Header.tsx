@@ -35,7 +35,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-                Mr3D
+                M3D
               </span>
               <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-orange-400 bg-orange-500/10 border border-orange-500/30 rounded-md uppercase">
                 v{APP_VERSION}

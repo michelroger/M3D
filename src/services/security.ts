@@ -1,7 +1,6 @@
 import type { CostCalculationParams, CostCalculationResult } from '../types';
 
-// Web Crypto SHA-256 Hashing para Senha do Admin
-export async function hashPassword(password: string, salt: string = 'MR3D_SALT_2026'): Promise<string> {
+export async function hashPassword(password: string, salt: string = 'M3D_SALT_2026'): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(password + salt);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -9,7 +8,6 @@ export async function hashPassword(password: string, salt: string = 'MR3D_SALT_2
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// Criptografia Simples e Segura de Objeto para LocalStorage
 export function encryptData<T>(data: T): string {
   try {
     const jsonStr = JSON.stringify(data);
@@ -33,7 +31,6 @@ export function decryptData<T>(cipherText: string): T | null {
   }
 }
 
-// Calculadora Privada de Custos de Impressão 3D
 export function calculatePrintCost(params: CostCalculationParams): CostCalculationResult {
   const {
     filamentWeightGrams,

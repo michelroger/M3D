@@ -149,7 +149,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950">
           <div className="flex items-center gap-2">
             <ShieldLock className="w-5 h-5 text-orange-400" />
-            <h2 className="text-lg font-bold text-white">Painel Administrativo Mr3D</h2>
+            <h2 className="text-lg font-bold text-white">Painel Administrativo M3D</h2>
           </div>
           <button
             onClick={onClose}
@@ -495,7 +495,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 </div>
               )}
 
-              {/* TAB 4: CONTROLE DE VERSÃO E CHANGELOG */}
               {activeTab === 'changelog' && (
                 <div className="space-y-6 text-xs text-slate-300">
                   <div className="flex items-center justify-between">
@@ -509,7 +508,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     </div>
                   </div>
 
-                  {/* CARD STATUS CI/CD GITHUB ACTIONS */}
                   <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="font-mono text-emerald-400 font-bold flex items-center gap-1.5">
@@ -526,7 +524,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     </p>
                   </div>
 
-                  {/* REGISTRO DE VERSÕES (CHANGELOG) */}
                   <div className="space-y-4">
                     <h4 className="text-xs font-mono font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
                       <GitCommit className="w-4 h-4 text-orange-400" />
