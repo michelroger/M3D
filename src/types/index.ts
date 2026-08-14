@@ -35,7 +35,7 @@ export interface Product {
   weightGrams: number;
   printTimeHours: number;
   availableMaterials: string[]; // Lista de nomes de materiais (ex: ['PLA', 'PETG', 'Nylon'])
-  availableColors: ProductColor[];
+  availableColors: ProductColor[]; // Cores disponíveis para a peça
   stlUrl?: string; // URL web ou Data URL base64 do modelo 3D (.stl / .3mf)
   imageUrl: string; // Imagem/capa principal
   images?: string[]; // Galeria de fotos adicionais da peça
@@ -87,6 +87,7 @@ export interface StoreSettings {
   adminSalt: string;
   currencySymbol: string;
   customMaterials: CustomMaterial[];
+  globalColors?: ProductColor[]; // Paleta global de cores cadastradas na loja
   githubRepo?: string;
   githubToken?: string;
 }

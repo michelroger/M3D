@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import type { Product, StoreSettings, ProductCategory, CustomMaterial } from '../types';
+import type { Product, StoreSettings, ProductCategory, CustomMaterial, ProductColor } from '../types';
 import { hashPassword } from '../services/security';
 import { APP_VERSION, APP_BUILD_DATE, CHANGELOG } from '../config/version';
-import { X, ShieldLock, Plus, Trash2, Edit3, Save, Download, Upload, Lock, Phone, Store, Key, GitCommit, CheckCircle2, History, Calculator, Layers, FileCode, UploadCloud, Image as ImageIcon } from 'lucide-react';
+import { X, ShieldLock, Plus, Trash2, Edit3, Save, Download, Upload, Lock, Phone, Store, Key, GitCommit, CheckCircle2, History, Calculator, Layers, FileCode, UploadCloud, Image as ImageIcon, Palette, Check } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface AdminModalProps {
@@ -14,6 +14,17 @@ interface AdminModalProps {
   onSaveSettings: (settings: StoreSettings) => void;
   onOpenCostCalc: () => void;
 }
+
+const DEFAULT_GLOBAL_COLORS: ProductColor[] = [
+  { name: 'Preto Stealth', hex: '#121212' },
+  { name: 'Branco Neve', hex: '#F8FAFC' },
+  { name: 'Laranja Neon', hex: '#FF5500' },
+  { name: 'Ciano Elétrico', hex: '#00F0FF' },
+  { name: 'Vermelho Fogo', hex: '#EF4444' },
+  { name: 'Verde Esmeralda', hex: '#10B981' },
+  { name: 'Dourado Silk', hex: '#D97706' },
+  { name: 'Cinza Titânio', hex: '#4A5568' },
+];
 
 export const AdminModal: React.FC<AdminModalProps> = ({
   isOpen,
@@ -51,6 +62,13 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   );
   const [newMaterialName, setNewMaterialName] = useState<string>('');
   const [newMaterialMultiplier, setNewMaterialMultiplier] = useState<number>(1.0);
+
+  // Estados da Paleta Global de Cores da Loja
+  const [globalColorsList, setGlobalColorsList] = useState<ProductColor[]>(
+    settings.globalColors || DEFAULT_GLOBAL_COLORS
+  );
+  const [newColorName, setNewColorName] = useState<string>('');
+  const [newColorHex, setNewColorHex] = useState<string>('#FF5500');
 
   // Autenticação Admin
   const handleLogin = async (e: React.FormEvent) => {
@@ -123,17 +141,39 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     });
   };
 
+  // Alternar Seleção de Cor para o Produto em Edição
+  const handleToggleProductColor = (colorObj: ProductColor) => {
+    if (!editingProduct) return;
+    const currentColors = editingProduct.availableColors || [];
+    const exists = currentColors.some((c) => c.hex.toLowerCase() === colorObj.hex.toLowerCase());
+
+    let updatedColors: ProductColor[];
+    if (exists) {
+      updatedColors = currentColors.filter((c) => c.hex.toLowerCase() !== colorObj.hex.toLowerCase());
+    } else {
+      updatedColors = [...currentColors, colorObj];
+    }
+
+    setEditingProduct({
+      ...editingProduct,
+      availableColors: updatedColors,
+    });
+  };
+
   // Salvar Peça (Criar ou Editar)
   const handleSaveProduct = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct || !editingProduct.title) return;
 
     const finalImages = editingProduct.images || (editingProduct.imageUrl ? [editingProduct.imageUrl] : []);
+    const finalColors = editingProduct.availableColors && editingProduct.availableColors.length > 0
+      ? editingProduct.availableColors
+      : globalColorsList.slice(0, 3);
 
     if (editingProduct.id) {
       const updated = products.map((p) =>
         p.id === editingProduct.id
-          ? ({ ...p, ...editingProduct, images: finalImages } as Product)
+          ? ({ ...p, ...editingProduct, images: finalImages, availableColors: finalColors } as Product)
           : p
       );
       onSaveProducts(updated);
@@ -148,11 +188,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         weightGrams: editingProduct.weightGrams || 100,
         printTimeHours: editingProduct.printTimeHours || 4,
         availableMaterials: editingProduct.availableMaterials || materialsList.map((m) => m.name),
-        availableColors: editingProduct.availableColors || [
-          { name: 'Preto', hex: '#121212' },
-          { name: 'Laranja', hex: '#FF5500' },
-          { name: 'Ciano', hex: '#00F0FF' },
-        ],
+        availableColors: finalColors,
         stlUrl: editingProduct.stlUrl || '',
         imageUrl: editingProduct.imageUrl || finalImages[0] || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
         images: finalImages,
@@ -175,7 +211,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     }
   };
 
-  // Adicionar Material
+  // Adicionar Novo Material Dinâmico
   const handleAddMaterial = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMaterialName.trim()) return;
@@ -188,20 +224,45 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
     const updated = [...materialsList, newMat];
     setMaterialsList(updated);
-    onSaveSettings({ ...settings, customMaterials: updated });
+    onSaveSettings({ ...settings, customMaterials: updated, globalColors: globalColorsList });
     setNewMaterialName('');
     setNewMaterialMultiplier(1.0);
     confetti({ particleCount: 30, spread: 50 });
   };
 
-  // Excluir Material
+  // Excluir Material Dinâmico
   const handleDeleteMaterial = (id: string) => {
     const updated = materialsList.filter((m) => m.id !== id);
     setMaterialsList(updated);
-    onSaveSettings({ ...settings, customMaterials: updated });
+    onSaveSettings({ ...settings, customMaterials: updated, globalColors: globalColorsList });
   };
 
-  // Salvar Configurações Gerais
+  // Adicionar Nova Cor Global à Loja
+  const handleAddGlobalColor = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newColorName.trim()) return;
+
+    const newColor: ProductColor = {
+      name: newColorName.trim(),
+      hex: newColorHex,
+    };
+
+    const updated = [...globalColorsList, newColor];
+    setGlobalColorsList(updated);
+    onSaveSettings({ ...settings, customMaterials: materialsList, globalColors: updated });
+    setNewColorName('');
+    setNewColorHex('#FF5500');
+    confetti({ particleCount: 30, spread: 50 });
+  };
+
+  // Excluir Cor Global
+  const handleDeleteGlobalColor = (colorHex: string) => {
+    const updated = globalColorsList.filter((c) => c.hex.toLowerCase() !== colorHex.toLowerCase());
+    setGlobalColorsList(updated);
+    onSaveSettings({ ...settings, customMaterials: materialsList, globalColors: updated });
+  };
+
+  // Salvar Configurações Gerais da Loja
   const handleSaveStoreSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     let updatedHash = settings.adminPinHash;
@@ -216,6 +277,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       storeName,
       adminPinHash: updatedHash,
       customMaterials: materialsList,
+      globalColors: globalColorsList,
     };
 
     onSaveSettings(updatedSettings);
@@ -257,7 +319,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/85 backdrop-blur-md overflow-y-auto">
       <div className="relative w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden my-8 max-h-[90vh] flex flex-col">
         
-        {/* HEADER DO ADMIN */}
+        {/* HEADER DO PAINEL ADMIN */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950">
           <div className="flex items-center gap-2">
             <ShieldLock className="w-5 h-5 text-orange-400" />
@@ -270,7 +332,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 type="button"
                 onClick={onOpenCostCalc}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 text-xs font-bold hover:bg-cyan-500/30 transition-all"
-                title="Abrir Calculadora de Custos 3D"
+                title="Abrir Calculadora de Custos de Impressão 3D"
               >
                 <Calculator className="w-4 h-4" />
                 <span>Calculadora de Custos 3D</span>
@@ -343,7 +405,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
-                <span>Materiais & Filamentos ({materialsList.length})</span>
+                <span>Materiais & Cores ({materialsList.length})</span>
               </button>
 
               <button
@@ -384,7 +446,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             {/* CONTEÚDO DAS TABS */}
             <div className="p-6 overflow-y-auto flex-1">
               
-              {/* TAB 1: PRODUTOS, GALERIA DE FOTOS & MODELO 3D */}
+              {/* TAB 1: PRODUTOS, CORES DA PEÇA, FOTOS E MODELO 3D */}
               {activeTab === 'products' && (
                 <div className="space-y-6">
                   
@@ -401,11 +463,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           weightGrams: 100,
                           printTimeHours: 4,
                           availableMaterials: materialsList.map((m) => m.name),
-                          availableColors: [
-                            { name: 'Preto', hex: '#121212' },
-                            { name: 'Laranja', hex: '#FF5500' },
-                            { name: 'Ciano', hex: '#00F0FF' },
-                          ],
+                          availableColors: globalColorsList.slice(0, 3),
                           stlUrl: '',
                           imageUrl: '',
                           images: [],
@@ -485,6 +543,42 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           />
                         </div>
 
+                        {/* SELETOR INTERATIVO DE CORES DISPONÍVEIS PARA A PEÇA */}
+                        <div className="sm:col-span-2 p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                          <label className="block text-xs font-mono font-bold text-orange-400 flex items-center gap-1.5">
+                            <Palette className="w-4 h-4" />
+                            Cores Disponíveis para esta Peça (Selecione na Paleta da Loja):
+                          </label>
+
+                          <div className="flex flex-wrap items-center gap-2 pt-1">
+                            {globalColorsList.map((col, idx) => {
+                              const selectedColors = editingProduct.availableColors || [];
+                              const isChecked = selectedColors.some((c) => c.hex.toLowerCase() === col.hex.toLowerCase());
+
+                              return (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => handleToggleProductColor(col)}
+                                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs border transition-all ${
+                                    isChecked
+                                      ? 'bg-orange-500/20 text-white border-orange-500 shadow'
+                                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700'
+                                  }`}
+                                >
+                                  <span
+                                    className="w-3.5 h-3.5 rounded-full border border-slate-700 shadow-inner flex items-center justify-center"
+                                    style={{ backgroundColor: col.hex }}
+                                  >
+                                    {isChecked && <Check className="w-2.5 h-2.5 text-white" />}
+                                  </span>
+                                  <span>{col.name}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
                         {/* BLOCO DE UPLOAD DE MÚLTIPLAS FOTOS DO PRODUTO */}
                         <div className="sm:col-span-2 p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
                           <div className="flex justify-between items-center">
@@ -506,7 +600,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             </label>
                           </div>
 
-                          {/* GRID DE PREVIEW DAS FOTOS CARREGADAS */}
                           {editingProduct.images && editingProduct.images.length > 0 ? (
                             <div className="flex flex-wrap items-center gap-2 pt-1">
                               {editingProduct.images.map((img, idx) => (
@@ -651,11 +744,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 </div>
               )}
 
-              {/* TAB 2: GERENCIAMENTO DINÂMICO DE MATERIAIS */}
+              {/* TAB 2: GERENCIAMENTO DINÂMICO DE MATERIAIS & PALETA GLOBAL DE CORES */}
               {activeTab === 'materials' && (
                 <div className="space-y-6 text-xs text-slate-300">
-                  <h3 className="text-sm font-bold text-white font-mono">GERENCIAMENTO DINÂMICO DE MATERIAIS & FILAMENTOS</h3>
+                  <h3 className="text-sm font-bold text-white font-mono">GERENCIAMENTO DINÂMICO DE MATERIAIS & PALETA DE CORES</h3>
 
+                  {/* 1. CADASTRO DE FILAMENTOS */}
                   <form onSubmit={handleAddMaterial} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
                     <h4 className="text-xs font-bold text-orange-400 font-mono">CADASTRAR NOVO FILAMENTO / MATERIAL</h4>
 
@@ -696,6 +790,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     </div>
                   </form>
 
+                  {/* LISTA DE MATERIAIS */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {materialsList.map((mat) => (
                       <div key={mat.id} className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 flex justify-between items-center">
@@ -710,6 +805,80 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           title="Excluir Material"
                         >
                           <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 2. CADASTRO DA PALETA GLOBAL DE CORES */}
+                  <form onSubmit={handleAddGlobalColor} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3 pt-6 border-t border-slate-800/80">
+                    <h4 className="text-xs font-bold text-cyan-400 font-mono flex items-center gap-1.5">
+                      <Palette className="w-4 h-4" />
+                      GERENCIADOR DA PALETA GLOBAL DE CORES DA LOJA
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-slate-400 mb-1">Nome da Cor:</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ex: Roxo Galaxy, Amarelo Sun..."
+                          value={newColorName}
+                          onChange={(e) => setNewColorName(e.target.value)}
+                          className="w-full bg-slate-900 text-white p-2.5 rounded-xl border border-slate-800 focus:border-cyan-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-400 mb-1">Código Hex da Cor:</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="color"
+                            value={newColorHex}
+                            onChange={(e) => setNewColorHex(e.target.value)}
+                            className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 cursor-pointer"
+                          />
+                          <input
+                            type="text"
+                            required
+                            value={newColorHex}
+                            onChange={(e) => setNewColorHex(e.target.value)}
+                            className="flex-1 bg-slate-900 text-white p-2.5 rounded-xl border border-slate-800 font-mono uppercase focus:border-cyan-500 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-end">
+                        <button
+                          type="submit"
+                          className="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Adicionar Cor à Paleta</span>
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+
+                  {/* LISTA DA PALETA DE CORES */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {globalColorsList.map((col, idx) => (
+                      <div key={idx} className="p-3 rounded-2xl bg-slate-950 border border-slate-800 flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-5 h-5 rounded-full border border-slate-700 shadow-inner"
+                            style={{ backgroundColor: col.hex }}
+                          />
+                          <span className="font-bold text-white text-xs truncate max-w-[80px]">{col.name}</span>
+                        </div>
+
+                        <button
+                          onClick={() => handleDeleteGlobalColor(col.hex)}
+                          className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
+                          title="Excluir Cor"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     ))}
