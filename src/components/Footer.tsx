@@ -59,7 +59,7 @@ export const Footer: React.FC<FooterProps> = ({ settings, onOpenAdmin }) => {
             </li>
             <li>
               <a
-                href="https://github.com/michelroger/mr3d"
+                href="https://github.com/michelroger/m3d"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-white transition-colors flex items-center gap-1.5"

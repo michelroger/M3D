@@ -80,6 +80,6 @@ export interface StoreSettings {
   adminPinHash: string; // SHA-256 hash da senha
   adminSalt: string;
   currencySymbol: string;
-  githubRepo?: string; // Ex: "usuario/mr3d"
+  githubRepo?: string; // Ex: "usuario/m3d"
   githubToken?: string; // Token encriptado localmente
 }
