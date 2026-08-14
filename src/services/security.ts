@@ -10,11 +10,9 @@ export async function hashPassword(password: string, salt: string = 'M3D_SALT_20
 
 export function encryptData<T>(data: T): string {
   try {
-    const jsonStr = JSON.stringify(data);
-    const encoded = btoa(encodeURIComponent(jsonStr));
-    return encoded.split('').reverse().join('');
+    return JSON.stringify(data);
   } catch (err) {
-    console.error('Erro ao encriptar dados:', err);
+    console.error('Erro ao serializar dados:', err);
     return '';
   }
 }
@@ -22,12 +20,20 @@ export function encryptData<T>(data: T): string {
 export function decryptData<T>(cipherText: string): T | null {
   try {
     if (!cipherText) return null;
+    // Suporte retrocompatível para JSON puro ou formato legado
+    if (cipherText.startsWith('[') || cipherText.startsWith('{')) {
+      return JSON.parse(cipherText) as T;
+    }
     const reversed = cipherText.split('').reverse().join('');
     const decoded = decodeURIComponent(atob(reversed));
     return JSON.parse(decoded) as T;
   } catch (err) {
-    console.error('Erro ao decriptar dados:', err);
-    return null;
+    try {
+      return JSON.parse(cipherText) as T;
+    } catch (e) {
+      console.error('Erro ao ler dados do LocalStorage:', err);
+      return null;
+    }
   }
 }
 
